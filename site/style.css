@@ -157,3 +157,47 @@ section { padding: 88px 0; }
 @media (min-width: 1260px) {
   .hero-shot { margin-right: -72px; }
 }
+
+html.lenis, html.lenis body { height: auto; }
+html.lenis { scroll-behavior: auto; }
+
+.logo rect { transform-box: fill-box; transform-origin: center; }
+.nav .logo { flex: none; }
+.js .logo .pane, .js .hero-copy > :not(.hero-logo), .js .hero-shot { opacity: 0; }
+
+.fgroup h3 { position: relative; }
+.fgroup h3 .ill-hop { position: absolute; right: 0; top: -8px; }
+.fgroup li.has-ill { display: grid; grid-template-columns: 1fr 56px; column-gap: 12px; align-items: center; }
+.fgroup li.has-ill strong, .fgroup li.has-ill span { grid-column: 1; }
+.fgroup li.has-ill .ill { grid-column: 2; grid-row: 1 / span 2; }
+
+.ill, .sico { fill: none; stroke: #d6dae3; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.ill-works { stroke-width: 2; flex: none; }
+.ill-hop { stroke-width: 2.6; flex: none; }
+.ill-lock { stroke-width: 1.8; }
+.sico { stroke-width: 1.5; position: absolute; top: 44px; right: 0; }
+.ill-desk { display: block; width: min(360px, 90%); height: auto; margin: 0 auto 28px; stroke-width: 1.5; }
+.works-row .ill-works { order: -1; }
+
+.code .tc { white-space: pre; }
+.cur { display: inline-block; width: 0; position: relative; }
+.cur::after { content: ""; position: absolute; left: 2px; top: 0.2em; width: 0.6ch; height: 1.15em; background: var(--accent); }
+
+.steps-fx::before { display: none; }
+.steps-fx .line { position: absolute; top: 15px; left: 16px; right: 16px; height: 1px; background: var(--accent); opacity: 0.55; transform-origin: 0 50%; }
+
+.nav-fx { border-bottom-color: transparent; background: none; }
+.nav-fx::before, .nav-fx::after { content: ""; position: absolute; left: 0; right: 0; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+.nav-fx::before { inset: 0; background: rgba(12, 14, 18, 0.94); z-index: -1; }
+.nav-fx::after { bottom: 0; height: 1px; background: var(--border); }
+.nav-fx.scrolled::before, .nav-fx.scrolled::after { opacity: 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn.primary { position: relative; overflow: hidden; }
+  .btn.primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%); transform: translateX(-130%); pointer-events: none; }
+  .btn.primary:hover::after { transform: translateX(130%); transition: transform 0.6s ease-out; }
+}
+@media (max-width: 900px) {
+  .sico { top: 0; }
+  .steps-fx .line { top: 16px; bottom: 16px; left: 15px; right: auto; width: 1px; height: auto; transform-origin: 50% 0; }
+}
