@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import * as pty from 'node-pty'
 import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand } from './agentLaunch'
 import { windowsCommandLine } from './commandLine'
+import type { QuitLog } from './quitLog'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
 
 const FLUSH_MS = 8
@@ -85,18 +86,19 @@ export class PtyManager {
     for (const id of [...this.entries.keys()]) this.kill(id)
   }
 
-  async terminateAll(timeoutMs: number): Promise<void> {
+  async terminateAll(timeoutMs: number, log: QuitLog = () => undefined): Promise<void> {
     const entries = [...this.entries.values()]
     this.entries.clear()
     const trees = entries.map((entry) => {
       entry.killed = true
       if (entry.timer) clearTimeout(entry.timer)
-      return taskkillTree(entry.process.pid)
+      return taskkillTree(entry.process.pid, log)
     })
     let timer: NodeJS.Timeout | undefined
     const deadline = new Promise<void>((resolve) => {
       timer = setTimeout(resolve, timeoutMs)
     })
+    log(`terminateAll: killing ${trees.length} pty tree(s)`)
     await Promise.race([Promise.all(trees), deadline])
     clearTimeout(timer)
   }
@@ -137,9 +139,14 @@ export class PtyManager {
   }
 }
 
-function taskkillTree(pid: number): Promise<void> {
+function taskkillTree(pid: number, log: QuitLog = () => undefined): Promise<void> {
+  log(`taskkill start pid=${pid}`)
   return new Promise((resolve) => {
-    execFile('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, timeout: 3000 }, () => resolve())
+    execFile('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, timeout: 3000 }, (error) => {
+      const code = error ? ((error as NodeJS.ErrnoException).code ?? error.message) : 0
+      log(`taskkill end pid=${pid} exit=${String(code)}`)
+      resolve()
+    })
   })
 }
 

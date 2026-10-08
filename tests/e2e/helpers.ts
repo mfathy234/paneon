@@ -15,6 +15,7 @@ export interface Sandbox {
   openLog: string
   opsDir: string
   notifyLog: string
+  quitLog: string
   pipe: string
 }
 
@@ -56,6 +57,7 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
     openLog: join(root, 'open.log'),
     opsDir: join(root, 'ops'),
     notifyLog: join(root, 'notify.log'),
+    quitLog: join(root, 'quit.log'),
     pipe: String.raw`\\.\pipe\paneon-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
   }
 }
@@ -83,6 +85,7 @@ export async function launchApp(
       PANEON_OPS_DIR: sandbox.opsDir,
       PANEON_OPEN_LOG: sandbox.openLog,
       PANEON_NOTIFY_LOG: sandbox.notifyLog,
+      PANEON_QUIT_LOG: sandbox.quitLog,
       PANEON_PIPE: sandbox.pipe,
       ...extraEnv
     }

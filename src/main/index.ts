@@ -18,10 +18,11 @@ import { startCliServer } from './cliServer'
 import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
+import { createQuitLog } from './quitLog'
+import { FLUSH_TIMEOUT_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
 
 const IMAGE_SCHEME = 'cg-image'
-const QUIT_KILL_TIMEOUT_MS = 2000
-const FLUSH_TIMEOUT_MS = 1000
+const quitLog = createQuitLog()
 
 app.setAppUserModelId('io.github.mfathy234.paneon')
 
@@ -152,16 +153,30 @@ app.whenReady().then(() => {
     statusWatcher.start()
     opsWatcher.start()
   })
+  const shutdownDeps: ShutdownDeps = {
+    log: quitLog,
+    stopServices: () => {
+      watcher.stop()
+      codexWatcher.stop()
+      geminiWatcher.stop()
+      statusWatcher.stop()
+      opsWatcher.stop()
+      updates?.stop()
+      usage.flush()
+    },
+    flushRenderer,
+    terminateAll: (timeoutMs) => ptys.terminateAll(timeoutMs, quitLog),
+    finish: () => {
+      if (!updates?.installOnQuit()) {
+        quitLog('app.exit called')
+        app.exit(0)
+      }
+    },
+    exit: (code) => app.exit(code)
+  }
   const shutdown = async (): Promise<void> => {
-    watcher.stop()
-    codexWatcher.stop()
-    geminiWatcher.stop()
-    statusWatcher.stop()
-    opsWatcher.stop()
-    updates?.stop()
-    usage.flush()
-    await flushRenderer()
-    await ptys.terminateAll(QUIT_KILL_TIMEOUT_MS)
+    armHardDeadline(shutdownDeps)
+    await runPhases(shutdownDeps)
   }
   updates = setupUpdates({
     settings: store,
@@ -172,15 +187,14 @@ app.whenReady().then(() => {
     }
   })
   app.on('before-quit', (event) => {
+    quitLog(`before-quit fired (already quitting: ${quitting})`)
     if (quitting) return
     quitting = true
     event.preventDefault()
-    void shutdown()
-      .catch(() => undefined)
-      .finally(() => {
-        if (!updates?.installOnQuit()) app.exit(0)
-      })
+    void runQuit(shutdownDeps)
   })
+  app.on('will-quit', () => quitLog('will-quit'))
+  app.on('quit', () => quitLog('quit'))
 })
 
 app.on('window-all-closed', () => app.quit())

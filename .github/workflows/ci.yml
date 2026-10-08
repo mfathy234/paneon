@@ -33,5 +33,6 @@ jobs:
           path: |
             test-results/
             playwright-report/
+            ${{ replace(env.TEMP, '\', '/') }}/paneon-e2e-*/quit.log
           if-no-files-found: ignore
           retention-days: 7
