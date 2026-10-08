@@ -50,7 +50,7 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'projects' | 'agents'
+export type View = 'grid' | 'projects' | 'agents' | 'usage'
 
 export type ProjectsTab = 'projects' | 'snippets'
 

@@ -16,6 +16,7 @@ import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
 import { startCliServer } from './cliServer'
 import { setupUpdates } from './updates'
+import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
 
 const IMAGE_SCHEME = 'cg-image'
@@ -130,12 +131,15 @@ app.whenReady().then(() => {
   const watcher = new SessionsWatcher((sessions) => send(IPC.sessionsUpdate, sessions))
   const codexWatcher = new CodexWatcher((sessions) => send(IPC.codexUpdate, sessions))
   const geminiWatcher = new GeminiWatcher((sessions) => send(IPC.geminiUpdate, sessions))
-  const statusWatcher = new StatusWatcher(bridgeDirs(app.getPath('userData')).statusDir, (infos) =>
+  const usage = new UsageService(join(userData, 'usage-history.json'))
+  usage.load()
+  const statusWatcher = new StatusWatcher(bridgeDirs(app.getPath('userData')).statusDir, (infos) => {
     send(IPC.statusUpdate, infos)
-  )
+    usage.recordStatus(infos)
+  })
   const opsWatcher = new OpsWatcher(opsDirs(), (snapshots) => send(IPC.opsUpdate, snapshots))
   registerImageProtocol(store)
-  registerIpc(() => mainWindow, store, ptys, statusWatcher, opsWatcher, warning)
+  registerIpc(() => mainWindow, store, ptys, statusWatcher, opsWatcher, usage, warning)
   mainWindow = createWindow()
   cli = new CliRunner(() => mainWindow)
   const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
@@ -155,6 +159,7 @@ app.whenReady().then(() => {
     statusWatcher.stop()
     opsWatcher.stop()
     updates?.stop()
+    usage.flush()
     await flushRenderer()
     await ptys.terminateAll(QUIT_KILL_TIMEOUT_MS)
   }

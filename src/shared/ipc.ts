@@ -50,6 +50,7 @@ export const IPC = {
   updateDismiss: 'update:dismiss',
   updateRestart: 'update:restart',
   updateOpenLink: 'update:open-link',
+  usageGet: 'usage:get',
   compareProbe: 'compare:probe',
   compareCreate: 'compare:create',
   compareStatus: 'compare:status',

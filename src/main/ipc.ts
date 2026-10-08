@@ -28,6 +28,8 @@ import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
 import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
+import type { UsageService } from './usage'
+import { USAGE_RANGES, type UsageRange } from '../shared/usage'
 
 function checkFolder(path: string): FolderCheck {
   if (typeof path !== 'string' || path.trim() === '') return { ok: false, error: 'Enter a folder.' }
@@ -53,6 +55,7 @@ export function registerIpc(
   ptys: PtyManager,
   status: StatusWatcher,
   ops: OpsWatcher,
+  usage: UsageService,
   initialWarning: string | null
 ): void {
   const locations = (): BridgeLocations => ({
@@ -111,6 +114,10 @@ export function registerIpc(
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))
+  ipcMain.handle(IPC.usageGet, (_event, range: UsageRange) => {
+    const known = USAGE_RANGES.some((entry) => entry.value === range)
+    return usage.report(known ? range : '7d', settings.get().projects)
+  })
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))

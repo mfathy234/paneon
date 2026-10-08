@@ -63,6 +63,7 @@ export class TopBarComponent {
     { class: 'btn ghost', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', onClick: () => toggleLayouts() },
     'Layouts'
   )
+  private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
   private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
   readonly updatePill = h('button', {
     class: 'update-pill',
@@ -81,6 +82,9 @@ export class TopBarComponent {
     this.projects.addEventListener('click', () => {
       showView(this.projects.getAttribute('aria-pressed') === 'true' ? 'grid' : 'projects')
     })
+    this.usage.addEventListener('click', () => {
+      showView(this.usage.getAttribute('aria-pressed') === 'true' ? 'grid' : 'usage')
+    })
     this.agents.addEventListener('click', () => {
       showView(this.agents.getAttribute('aria-pressed') === 'true' ? 'grid' : 'agents')
     })
@@ -93,6 +97,7 @@ export class TopBarComponent {
       this.projects,
       this.agents,
       this.layoutsButton,
+      this.usage,
       this.count,
       this.updatePill,
       h('span', { class: 'spacer' }),
@@ -108,6 +113,7 @@ export class TopBarComponent {
     const { sessions, busy } = countSessions(views)
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.agents.setAttribute('aria-pressed', String(state.view === 'agents'))
+    this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
     const updates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.agentsDot.hidden = !updates
     this.agents.setAttribute('aria-label', updates ? 'Agents, updates available' : 'Agents')
