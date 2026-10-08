@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { APP_VERSION, activeTermId, bufferText, closeApp, createSandbox, feedTerminal, launchApp, selectAllText } from './helpers'
+import { APP_VERSION, activeTermId, bufferText, closeApp, createSandbox, feedTerminal, launchApp, selectAllText, QUIT_BUDGET_MS } from './helpers'
 
 const SLOW = 30_000
 const flat = async (page: Page, id: string): Promise<string> => (await bufferText(page, id)).replace(/[\r\n]/g, '')
@@ -89,7 +89,7 @@ test('snippets are managed in the Projects view with a confirmation naming the o
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete "Review the diff"' }).click()
     await expect(page.locator('.snippet-row')).toHaveCount(1)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -147,6 +147,6 @@ test('inserting a snippet types it into the focused terminal without sending it 
     await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain('GOT "Review the staged changes and list risks."')
     expect(await bufferText(page, id)).not.toContain('is not recognized')
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })

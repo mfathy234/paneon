@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp, runCli } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, runCli, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -100,7 +100,7 @@ test('saves, lists, renames and deletes layouts from the Layouts menu', async ()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete "Docs"' }).click()
     await expect.poll(() => readSettings(sandbox.userData).layouts.map((l: any) => l.name)).toEqual(['Morning'])
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -156,7 +156,7 @@ test('opens a layout into an empty grid, asks before touching open panes and res
     await expect(page.locator('.toast')).toHaveText("Layout 'Lost' has no pane whose project still exists.")
     await expect(page.locator('.pane')).toHaveCount(2)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -203,6 +203,6 @@ test('the paneon command lists and opens layouts', async () => {
     expect(result.err).toContain("Did not open layout 'Docs day'.")
     await expect(page.locator('.pane')).toHaveCount(2)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const FAKE = resolve(__dirname, '../support/fakeAgent.cjs')
@@ -168,7 +168,7 @@ test('asks two agents in separate worktrees, links the panes and compares or kee
     await expect.poll(() => readSettings(sandbox.userData).workspace.panes.map((p: any) => p.compare)).toEqual([undefined])
     expect(readSettings(sandbox.userData).workspace.panes[0].folder).toBe(sideA)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -225,7 +225,7 @@ test('keeps both sides, removes a clean worktree after a named confirmation and 
     expect(existsSync(claudeCwd)).toBe(true)
     expect(git(repo, 'branch', '--list', 'compare/*').split('\n').filter(Boolean)).toHaveLength(3)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -262,6 +262,6 @@ test('works in a folder that is not a git repository and reports why worktrees a
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.compare-group')).toHaveCount(0)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })

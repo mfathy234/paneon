@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, runCli } from './helpers'
+import { closeApp, createSandbox, launchApp, runCli, QUIT_BUDGET_MS } from './helpers'
 
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
@@ -77,7 +77,7 @@ test('the paneon command talks to the running app over the pipe', async () => {
     expect(missing.code).toBe(1)
     expect(missing.err).toContain('This folder does not exist.')
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 

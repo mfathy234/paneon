@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 
@@ -75,7 +75,7 @@ test('the command palette opens with Ctrl+K, filters across groups and runs comm
     await expect(palette).toBeVisible()
     await page.keyboard.press('Escape')
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 

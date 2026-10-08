@@ -113,7 +113,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane-info .info-changes')).toHaveCount(1)
     await expect(page.locator('.topbar-limits')).toBeHidden()
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -269,7 +269,7 @@ test('pane actions menu and resume menu', async () => {
     const diffTerm = await activeTermId(page)
     await expect.poll(() => bufferText(page, diffTerm), { timeout: 20_000 }).toContain('git diff')
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 

@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -125,7 +125,7 @@ test('the resume picker lists sessions of all agents, filters them and resumes i
     await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.map((t: any) => t.sessionId)).toEqual([CODEX_ID])
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 

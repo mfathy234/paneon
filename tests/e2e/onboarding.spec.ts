@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { createFakeTools } from '../support/fakeTools'
-import { closeApp, createSandbox, launchApp, runCli } from './helpers'
+import { closeApp, createSandbox, launchApp, runCli, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -48,7 +48,7 @@ test('first run shows the setup steps, marks them done and remembers the dismiss
     await expect(first.page.locator('.onboarding')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).onboardingDismissed).toBe(true)
   } finally {
-    expect(await closeApp(first.app)).toBeLessThan(10_000)
+    expect(await closeApp(first.app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 

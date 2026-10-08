@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const CLAUDE_ID = '11111111-2222-4333-8444-555555555555'
@@ -121,7 +121,7 @@ test('the usage view totals tokens and cost per day, project and agent from loca
     await page.getByRole('button', { name: 'Usage', exact: true }).click()
     await expect(page.locator('.usage-view')).toBeHidden()
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -145,7 +145,7 @@ test('explains empty and partial data instead of showing blank charts', async ()
     await expect(page.locator('#usage-chart-empty')).toContainText('No cost was reported in this range')
     await page.screenshot({ path: join(SCREENS, '61-usage-empty.png') })
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -173,6 +173,6 @@ test('records limit readings and session cost from the status-line payloads for 
     await page.getByRole('tab', { name: '30 days' }).click()
     await expect(page.locator('#usage-by-agent tbody tr').first().locator('td').last()).toHaveText('$1.75')
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { activeTermId, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox } from './helpers'
+import { activeTermId, closeApp, createSandbox, feedTerminal, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const FAKE = resolve(__dirname, '../support/fakeAgent.cjs')
@@ -143,7 +143,7 @@ test('continues a session in another agent with an editable summary and a from c
     await expect(page.getByRole('dialog', { name: 'Continue in Gemini' })).toHaveCount(0)
     await expect(page.locator('.pane')).toHaveCount(2)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
@@ -161,6 +161,6 @@ test('summarises an unnamed session outside a git repository and says what it do
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })

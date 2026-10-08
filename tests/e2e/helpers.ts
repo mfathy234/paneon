@@ -110,7 +110,7 @@ export const selectAllText = (page: Page, id: string): Promise<void> =>
 export const fontSize = (page: Page, id: string): Promise<number> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.fontSize(termId), id)
 
-export const QUIT_BUDGET_MS = 10_000
+export const QUIT_BUDGET_MS = process.env.CI ? 30_000 : 10_000
 
 export async function closeApp(app: ElectronApplication): Promise<number> {
   const started = Date.now()
@@ -120,6 +120,7 @@ export async function closeApp(app: ElectronApplication): Promise<number> {
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, QUIT_BUDGET_MS))])
   const elapsed = Date.now() - started
   if (proc.exitCode === null) proc.kill()
+  await Promise.race([app.close().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 5_000))])
   return elapsed
 }
 

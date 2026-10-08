@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, closeBounded, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, closeBounded, createSandbox, launchApp, type Sandbox, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex) session in Smoke$/
@@ -158,7 +158,7 @@ test('ops feed: strip, agents drawer, details panel, updates, stale and ended', 
     await expect(page.locator('.info-letters')).toHaveCount(0)
     await expect(page.locator('.agents-drawer')).toBeHidden()
   } finally {
-    expect(await closeApp(app)).toBeLessThan(10_000)
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
