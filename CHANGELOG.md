@@ -3,6 +3,34 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-10-09
+
+### Added
+
+- A command palette. **Ctrl+K** (or Ctrl+Shift+P) lists your open sessions, actions, projects, snippets and saved
+  layouts in one fuzzy search. Up and Down move, Tab jumps to the next group, Enter runs, Esc closes, and the commands you
+  ran last come first. Menus and shortcuts read the same command list. The key can be changed with `paletteShortcut` in
+  `settings.json`.
+- Saved layouts. The **Layouts** button in the top bar saves the current panes (project, agents, tabs, session ids, text
+  size and order) under a name, and lists, opens, renames and deletes them. Opening asks whether to replace the current
+  panes or add alongside them. Tabs with a session id resume it, the rest start fresh. From a terminal:
+  `paneon open <layout>` and `paneon layouts`.
+- Prompt snippets. A **Snippets** tab in Projects holds short prompts, global or for one project, with the variables
+  `{{selection}}`, `{{branch}}`, `{{project}}` and `{{folder}}` and an optional **Alt+1** to **Alt+9** shortcut. Inserting
+  types the text into the focused terminal without pressing Enter, as a bracketed paste when the agent supports it so
+  that no line runs on its own. Snippets are also in the palette.
+- Ask two agents. **Ask two agents...** (Ctrl+Shift+A, the split-button menu or the palette) sends one prompt to two agents
+  and shows them side by side in a linked pair under a shared Compare header. Each can run in its own git worktree on a
+  new branch. **Keep A**, **Keep B**, **Keep both** and **Diff A vs B** finish the comparison; closing a side and removing
+  its worktree and branch each ask first, and a worktree with uncommitted files or commits is kept unless you confirm.
+- Continue in another agent. A pane's menu and the palette offer **Continue in Codex / Gemini / Claude**. Paneon writes a
+  summary (goal, files touched from git, plan and last check from the ops feed, last error and recent terminal output) that
+  you can edit, then starts the other agent in the same folder with it as the first message. The new pane carries a
+  **from <agent>** chip.
+- A **Usage** view with today, 7 day and 30 day ranges. It reads Claude Code, Codex CLI and Gemini CLI history from their
+  own folders and shows tokens per day (or hour) by agent, tokens and Claude Code cost by project and by agent, and a
+  history of the 5 hour and weekly limits. Cost appears only where an agent reports one; nothing is estimated.
+
 ## [0.4.0] - 2026-10-08
 
 ### Added

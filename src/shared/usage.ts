@@ -453,7 +453,7 @@ function limitSeries(readings: LimitReading[], window: RangeWindow): LimitSeries
 
 export function formatTokens(value: number): string {
   if (value < 1000) return String(Math.round(value))
-  if (value < 1_000_000) return value < 10_000 ? `${(value / 1000).toFixed(1)}K` : `${Math.round(value / 1000)}K`
+  if (value < 999_500) return value < 10_000 ? `${(value / 1000).toFixed(1)}K` : `${Math.round(value / 1000)}K`
   return `${(value / 1_000_000).toFixed(value < 10_000_000 ? 2 : 1)}M`
 }
 

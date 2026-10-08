@@ -37,6 +37,8 @@ export function handoffDialog(options: HandoffDialogOptions): Promise<string | n
     h('div', { class: 'dialog-actions' }, cancel, start)
   )
   const shown = present<string | null>(dialog, null, area)
+  area.setSelectionRange(0, 0)
+  area.scrollTop = 0
   area.addEventListener('input', () => (error.hidden = true))
   cancel.addEventListener('click', () => shown.finish(null))
   start.addEventListener('click', () => {

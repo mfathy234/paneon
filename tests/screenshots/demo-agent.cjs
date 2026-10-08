@@ -62,8 +62,35 @@ const SCRIPTS = {
   ]
 }
 
+const compare = /-compare-[a-z0-9]+-([ab])$/.exec(path.basename(process.cwd()))
+const asked = process.argv[3] ?? 'Why does the login test fail on CI but not locally?'
+
+const COMPARE = {
+  'a:claude': [
+    bold(`> ${asked}`),
+    '',
+    `${green('●')} Reading the spec and the CI configuration.`,
+    dim('  ⎿  Read tests/login.spec.ts (58 lines)'),
+    dim('  ⎿  Bash npm test -- login'),
+    '',
+    `${green('●')} The spec waits 500 ms for the redirect. CI is slower, so the wait expires.`,
+    '',
+    `${amber('✻')} Testing a fix with waitForURL… ${dim('(esc to interrupt)')}`
+  ],
+  'b:codex': [
+    bold(`› ${asked}`),
+    '',
+    `${green('•')} The token cookie is set after the redirect, not before it.`,
+    `${green('•')} Running the CI environment variables locally to confirm.`,
+    dim('  edit  tests/login.spec.ts  (+4 -1)'),
+    '',
+    `${amber('⠧')} Working (9s • esc to interrupt)`
+  ]
+}
+
 const name = path.basename(process.cwd())
-const lines = SCRIPTS[`${name}:${process.argv[2]}`] ?? SCRIPTS[name] ?? [bold('> Ready')]
+const fallback = compare ? COMPARE[`${compare[1]}:${process.argv[2]}`] : undefined
+const lines = fallback ?? SCRIPTS[`${name}:${process.argv[2]}`] ?? SCRIPTS[name] ?? [bold('> Ready')]
 process.stdout.write('\r\n')
 for (const line of lines) process.stdout.write(`${line}\r\n`)
 process.stdout.write('\r\n')

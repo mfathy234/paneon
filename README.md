@@ -22,7 +22,13 @@
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Plans and sub-agents at a glance.** With the optional ops feed, panes show plan progress and a drawer of running sub-agents; a details panel shows context, limits, changed files and the last build and test result.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
-- **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, or `paneon ls` to list your projects, all from the terminal you already have open.
+- **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
+- **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `paneon open <layout>`.
+- **Prompt snippets.** Keep short prompts with `{{selection}}`, `{{branch}}`, `{{project}}` and `{{folder}}` variables and insert one into the focused terminal with **Alt+1** to **Alt+9**, typed but not sent.
+- **Ask two agents.** Send one prompt to two agents at once, each optionally in its own git worktree, watch them side by side and keep one, keep both or diff them.
+- **Continue in another agent.** Hand a session over to Codex, Gemini or Claude with an editable summary of the goal, the files touched, what is done and left, the last error and the recent output.
+- **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
+- **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, `paneon open <layout>` to bring a saved layout back, or `paneon ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab.
 - **Themes.** Eight themes (Grid Dark, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
@@ -46,7 +52,19 @@
 
 | Update available | What's new after an update |
 |---|---|
-| ![The Update 0.4.1 pill in the top bar with its popover: release notes, Update now and Later](docs/screenshots/update.png) | ![The What's new dialog listing the changes since the previous version](docs/screenshots/whats-new.png) |
+| ![The Update 0.5.1 pill in the top bar with its popover: release notes, Update now and Later](docs/screenshots/update.png) | ![The What's new dialog listing the changes since the previous version](docs/screenshots/whats-new.png) |
+
+| Command palette | Saved layouts |
+|---|---|
+| ![The command palette filtered by "re", with sessions, actions and projects](docs/screenshots/palette.png) | ![The Layouts menu with two saved layouts, each with Open, Rename and Delete](docs/screenshots/layouts.png) |
+
+| Ask two agents | Continue in another agent |
+|---|---|
+| ![Two agents answering the same prompt side by side under a Compare header, each in its own worktree, with Keep A, Keep B, Keep both and Diff A vs B](docs/screenshots/compare.png) | ![The Continue in Codex dialog with an editable summary of the session](docs/screenshots/handoff.png) |
+
+| Prompt snippets | Usage |
+|---|---|
+| ![The Snippets tab of the Projects view with the Edit snippet dialog open](docs/screenshots/snippets.png) | ![The Usage view with tokens per day by agent, limit history and tables by project and by agent](docs/screenshots/usage.png) |
 
 ## Supported agents
 
@@ -71,7 +89,7 @@ The installer also puts the `paneon` command on your user PATH (open a new termi
 
 The installed build (`Paneon-Setup-<version>.exe`) updates itself from GitHub Releases:
 
-- 10 seconds after start and every 6 hours it checks for a newer release. An **Update 0.4.1** pill appears in the top bar, right of the session counts.
+- 10 seconds after start and every 6 hours it checks for a newer release. An **Update 0.5.1** pill appears in the top bar, right of the session counts.
 - **Update now** downloads in the background (the pill shows the progress) while your sessions keep running. When it is ready the pill says **Restart to update**: **Restart now** installs it and your open sessions reopen, or choose **When I quit** and it installs the next time you close Paneon.
 - **Later** hides the pill until a newer version than the one you dismissed is found. A failed download shows **Update failed** with **Try again** and **Open GitHub**.
 - The Theme popover has an **Updates** section: turn automatic checks off, see when Paneon last checked, **Check now** and **What's new**.
@@ -99,6 +117,9 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 
 | Keys | Action |
 |---|---|
+| Ctrl+K, Ctrl+Shift+P | Command palette: type to filter, Up and Down, **Tab** next group, Enter runs, Esc closes |
+| Ctrl+Shift+A | Ask two agents |
+| Alt+1 to Alt+9 | Insert the snippet with that number into the focused terminal, without pressing Enter |
 | Ctrl+N | New session. Quick-pick: type to filter, arrows, Enter, Esc; **Tab** cycles Claude, Codex, Gemini for the highlighted project |
 | Ctrl+Shift+N | Same quick-pick, preset to the agent after each project's default |
 | Ctrl+Shift+R | Open the picker in **Resume** mode. Inside the picker, **Ctrl+R** toggles New / Resume, **Tab** cycles the agent filter, Enter resumes in a new pane, Shift+Enter resumes in the focused pane (after a confirmation if that tab is a running agent) |
@@ -125,6 +146,53 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 
 Press **Ctrl+Shift+R**, choose **Resume a session...** in the split-button menu, or choose **Resume in <project>...** in a project's menu in the sidebar. The list shows up to 50 sessions from Claude Code, Codex CLI and Gemini CLI for your projects, newest first, grouped as Today, Yesterday, This week and Older. Each row shows the agent, title, project, age and message count, and **open in pane N** when the session is already running (Enter then focuses that pane instead of starting a second copy). The right side previews the selected session: agent and model, folder, start and last activity, the first prompt and the last assistant message. A resumed pane carries a muted **resumed** chip for its first minute or until you type into it. Sessions are read from the agents' own folders, are loaded in the background and cached by file size and modification time.
 
+### Command palette
+
+Press **Ctrl+K** (or Ctrl+Shift+P) anywhere in the window, also while a terminal has focus. Paneon takes Ctrl+K before the terminal sees it, because agents rarely use it on Windows; set `"paletteShortcut": "Ctrl+Alt+P"` in `settings.json` to use another key (Ctrl or Alt plus one key, and Ctrl+Shift+P keeps working). The list has five groups: **Sessions** (switch to an open pane), **Actions**, **Projects** (`Start Codex in billing-api`), **Snippets** and **Layouts**. The filter is fuzzy and also matches session titles. Up and Down move through every row, **Tab** jumps to the next group, **Enter** runs the row and **Esc** closes. With an empty filter the commands you ran last come first under **Recent**. The palette, the menus and the keyboard shortcuts read one command list, so a new action shows up in all three.
+
+### Saved layouts
+
+**Layouts** in the top bar lists your saved layouts. **Save current layout...** asks for a name and stores, for every pane in order, its project, its tabs (agent, label and session id), the active tab and the text size. **Open** adds the layout's panes. When panes are already open Paneon asks first: **Replace with <name>** stops the open sessions (their files stay on disk), **Add alongside** keeps them running, **Cancel** does nothing. Tabs that have a session id resume it (`claude -r <id>`, `codex resume <id>`, `gemini --resume <id>`), the others start fresh, and a session that is already open in the grid starts fresh instead of running twice. Panes whose project was removed are skipped and reported. **Rename** and **Delete** are in the same list, and Delete names the layout in its confirmation. The two panes of an **Ask two agents** comparison are saved as plain panes without session ids, because their worktrees are temporary. From a terminal, `paneon layouts` lists them and `paneon open <layout>` opens one (see below).
+
+### Snippets
+
+Projects has a **Snippets** tab for short prompts. A snippet has a name, a text, a scope (all projects or one project) and an optional shortcut from **Alt+1** to **Alt+9**; a shortcut cannot be used twice in scopes that overlap. **Edit** and **Delete** are on each row, and Delete names the snippet in its confirmation. The text can use these variables:
+
+| Variable | Replaced with |
+|---|---|
+| `{{selection}}` | the text selected in the focused terminal (the snippet is not inserted if nothing is selected) |
+| `{{branch}}` | the current git branch of the pane |
+| `{{project}}` | the project name |
+| `{{folder}}` | the pane's folder |
+
+Press the shortcut or choose `Insert "<name>"` in the palette to type the text into the focused terminal **without pressing Enter**, so you can read and edit it first. Multi-line text is sent as a bracketed paste when the program in the terminal has turned that on, which Claude Code, Codex CLI and Gemini CLI do, so no line runs on its own; in a terminal that has not, the lines are joined into one and a toast says so. Control characters are removed from the text.
+
+### Ask two agents
+
+**Ask two agents...** (Ctrl+Shift+A, the split-button menu or the palette) opens a dialog with a project, an agent for **A** and one for **B** (default Claude and Codex), a prompt and the option **Start each in its own git worktree**, which is on when the project is a git repository with at least one commit. With it on, Paneon runs `git worktree add -b compare/<id>-a ../<repo>-compare-<id>-a HEAD` (and the same for `b`) so the two agents cannot overwrite each other; git errors show in the dialog and nothing is left behind. Both agents start with the prompt as their first message: `claude "<prompt>"`, `codex "<prompt>"` and `gemini --prompt-interactive=<prompt>`, passed as one argument without a shell. A Codex or Gemini that is installed only as an npm `.cmd` shim cannot take a prompt safely and reports that instead.
+
+The two panes sit side by side under a shared **Compare** header with the prompt, marked **A** and **B**, with these buttons below:
+
+- **Keep A** and **Keep B** close the other pane after a confirmation that names it, then offer to remove its worktree and branch. If that worktree has uncommitted files or commits of its own Paneon says so and keeps it unless you confirm.
+- **Keep both** unlinks the two panes and leaves the worktrees alone.
+- **Diff A vs B** opens a shell tab with `git diff compare/<id>-a compare/<id>-b`, or `git diff --no-index` between the two folders when either has uncommitted files (that diff also lists the worktrees' `.git` pointer files).
+
+A comparison survives a restart: the pair, the prompt and the worktree folders are saved with the open panes.
+
+### Continue in another agent
+
+The pane menu (the three dots) and the palette offer **Continue in Codex**, **Gemini** or **Claude**, whichever the pane is not. Paneon builds a summary from what it knows: the session title as **Goal**, **Files touched** from `git diff HEAD --numstat` and untracked files, **What's done** and **What's left** from the ops feed's plan and last build or test result, **Last error** (a failed check, else the last line of the terminal that looks like an error) and the last 40 lines of terminal output without colours. You can edit all of it before **Start <agent> with this** opens a new pane in the same folder with the text as the first message. The pane you continued from keeps running, and the new one shows a muted **from <agent>** chip. The summary is limited to 6000 characters.
+
+### Usage
+
+**Usage** in the top bar shows what your agents used over **Today** (per hour), **7 days** or **30 days** (per day). Everything is read from the agents' own folders, off the interface thread and cached by file size and modification time:
+
+- Claude Code: `~/.claude/projects`, the `usage` of each assistant message (streamed messages count once). Tokens are input, output and cache writes; cache reads are listed apart.
+- Codex CLI: `~/.codex/sessions`, the running `token_count` totals turned into amounts per hour. Tokens are uncached input plus output; cached input is listed apart.
+- Gemini CLI: `~/.gemini/tmp/*/chats`, the token counts of each reply (uncached input, output, thoughts and tool tokens).
+
+The chart stacks the three agents and switches between **Tokens** and **Cost**. **By project** assigns each session to the project whose folder contains its working folder (anything else is **Other**) and shows sessions, tokens, cost and the busiest agent; **By agent** shows sessions, tokens, cache reads and cost. Paneon never invents a price: cost is shown only for Claude Code sessions that reported one through **Show live session info**, which Paneon keeps per session in `usage-history.json` so it stays after the status files are cleaned up (it is counted on the day the cost last changed). Codex and Gemini show `n/a`. The same file keeps a history of the 5 hour and weekly limit readings (a new one when a percentage changes or after 15 minutes, newest 3000 kept), drawn as **Limit usage**; it starts on the day you turn the live info on. When a folder is missing, a range is empty or no cost was reported, the view says so instead of showing a blank chart.
+
 ### The paneon command
 
 `paneon` talks to the running app over a local named pipe (`\\.\pipe\paneon-<user>`) and starts Paneon first if it is not running. Nothing stays in the background when Paneon is closed. It prints to the terminal you ran it in and exits non-zero on errors.
@@ -132,6 +200,8 @@ Press **Ctrl+Shift+R**, choose **Resume a session...** in the split-button menu,
 | Command | What it does |
 |---|---|
 | `paneon` or `paneon open` | Open Paneon, or bring it to the front |
+| `paneon open <layout> [--replace\|--alongside]` | Open a saved layout (a name, in any case, or with dashes for spaces). When panes are open it asks in the app unless you give `--replace` (stop them first) or `--alongside` (keep them) |
+| `paneon layouts` | List saved layouts with their pane counts and projects |
 | `paneon .` | Add the current folder as a project if it is new (name = folder name, default agent Claude) and start its default agent in a new pane |
 | `paneon start <project\|path> [--agent claude\|codex\|gemini] [--here]` | Start a session; a path is added as a project if it is new. `--here` opens it as a tab in the focused pane when that pane belongs to the project |
 | `paneon resume [project] [--last] [--agent <agent>]` | Open the resume picker for a project (default: the project of the current folder), or with `--last` resume the newest matching session |
@@ -176,7 +246,8 @@ Both are optional and off until you turn them on.
 
 Everything is in the Electron user-data folder, `%APPDATA%\Paneon` for the installed app:
 
-- `settings.json`: projects, theme, notification toggles, sidebar state and the open-panes workspace.
+- `settings.json`: projects, theme, notification toggles, sidebar state, the open-panes workspace, saved layouts, snippets and the palette key.
+- `usage-history.json`: the last cost of each Claude Code session that reported one and the 5 hour and weekly limit readings, for the Usage view (written only when the live session info is on).
 - `bin\` and `status\`: the status-line script and the saved status payloads (only when the live toggle was used; files older than 7 days are removed).
 
 Paneon has no telemetry and makes no network calls except the Agents view looking up the latest CLI versions (`npm view`, or the npm registry when npm is missing). Agent session files are only read. Upgrading from Claude Grid 0.1: on first start Paneon copies `settings.json` and the status folder from `%APPDATA%\claude-grid` (the old folder is never deleted) and, if the live toggle was on, re-points the status line it installed. If `~/.claude/settings.json` was changed since, it is left alone and a toast explains how to turn the toggle off and on again.
@@ -227,12 +298,14 @@ The end-to-end tests launch the built app with a temporary user-data folder and 
 ```
 src/shared     types, agents, settings schema, layout, session matching, status-line and ops-feed parsing,
                agent install/update logic, needs-you state machine, themes, contrast, resume index and
-               session details, command-line parsing and command handling
+               session details, command-line parsing and command handling, command palette matching, layouts, snippets,
+               comparison and handoff helpers, usage parsing and aggregation
 src/main       window, pty manager, agent launch, settings store, user-data migration, watchers, status-line bridge,
                agent version checks, resume lists and the cross-project session index, git, notifications,
-               command-line pipe server and runner, IPC
+               command-line pipe server and runner, git worktrees for comparisons, usage scan and history, IPC
 src/preload    typed bridge exposed as window.gridApi
 src/renderer   app shell, sidebar, grid, pane, quick-pick, resume picker, onboarding, projects and agents views,
+               command registry and palette, layouts menu, snippets, comparison pair, handoff and usage views,
                theme picker, dialogs, command host
 build          icons, the paneon launcher (paneon.cmd, paneon-cli.cjs) and the installer PATH script
 tests/unit     vitest

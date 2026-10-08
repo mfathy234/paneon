@@ -303,6 +303,8 @@ describe('formatting', () => {
     expect(formatTokens(999)).toBe('999')
     expect(formatTokens(1500)).toBe('1.5K')
     expect(formatTokens(412_000)).toBe('412K')
+    expect(formatTokens(999_400)).toBe('999K')
+    expect(formatTokens(999_600)).toBe('1.00M')
     expect(formatTokens(1_900_000)).toBe('1.90M')
     expect(formatTokens(36_000_000)).toBe('36.0M')
     expect(formatUsd(61.4)).toBe('$61.40')
