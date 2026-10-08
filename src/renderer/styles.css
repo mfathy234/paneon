@@ -2826,3 +2826,139 @@ input[type='checkbox'] {
   font-family: var(--font-mono);
   color: var(--accent);
 }
+
+.compare-group {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.compare-head,
+.compare-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: var(--sidebar);
+}
+
+.compare-head {
+  height: 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-head .icon {
+  color: var(--accent);
+}
+
+.compare-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.compare-prompt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.compare-project {
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+
+.compare-panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+}
+
+.compare-slot {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.compare-slot > .pane {
+  flex: 1;
+}
+
+.compare-foot {
+  height: 48px;
+  border-top: 1px solid var(--border);
+}
+
+.compare-foot-hint {
+  font-size: 12px;
+}
+
+.compare-group.solo .compare-head,
+.compare-group.solo .compare-foot {
+  display: none;
+}
+
+.compare-group.solo .compare-panes {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+}
+
+.compare-group.solo .compare-slot:has(> .pane[hidden]) {
+  display: none;
+}
+
+.compare-group.solo {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.chip-compare {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.compare-dialog {
+  width: 560px;
+}
+
+.compare-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.compare-note {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.compare-error {
+  margin: 0;
+  max-height: 140px;
+  padding: 8px 10px;
+  overflow: auto;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.compare-slot .pane-fresh {
+  display: none;
+}

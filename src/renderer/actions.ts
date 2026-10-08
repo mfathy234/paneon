@@ -43,6 +43,7 @@ import {
   mapTerm,
   newId,
   paneById,
+  folderOfPane,
   projectById,
   store,
   type AppState,
@@ -134,16 +135,17 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
   const result = await api.spawn({
     id: termId,
     agent: term.agent,
-    cwd: project.folder,
+    cwd: pane.folder ?? project.folder,
     resume,
     sessionId,
     command: term.command,
+    prompt: term.prompt,
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
   })
   if (result.ok) {
     store.set((s) =>
-      mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume }))
+      mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume, prompt: undefined }))
     )
     return
   }
@@ -230,7 +232,7 @@ export async function addTab(paneId: string, agent: TabAgent, input?: string): P
 
 function paneFolder(paneId: string): string | null {
   const pane = paneById(store.state, paneId)
-  return (pane ? projectById(store.state, pane.projectId)?.folder : undefined) ?? null
+  return pane ? folderOfPane(store.state, pane) : null
 }
 
 export async function openPaneFolder(paneId: string, kind: QuickOpenKind): Promise<void> {
@@ -280,9 +282,10 @@ function removePane(state: AppState, paneId: string): AppState {
   const index = state.panes.findIndex((p) => p.id === paneId)
   const panes = state.panes.filter((p) => p.id !== paneId)
   const neighbour = panes[Math.min(index, panes.length - 1)]
+  const closing = state.panes[index]?.compare?.id
   return {
     ...state,
-    panes,
+    panes: closing ? panes.map((p) => (p.compare?.id === closing ? { ...p, compare: undefined } : p)) : panes,
     focusedId: state.focusedId === paneId ? (neighbour?.id ?? null) : state.focusedId,
     maximizedId: state.maximizedId === paneId ? null : state.maximizedId
   }
@@ -608,8 +611,8 @@ export async function refreshBranches(): Promise<void> {
   const state = store.state
   const folders = new Set<string>()
   for (const pane of state.panes) {
-    const project = projectById(state, pane.projectId)
-    if (project) folders.add(project.folder)
+    const folder = folderOfPane(state, pane)
+    if (folder) folders.add(folder)
   }
   const entries = await Promise.all([...folders].map(async (f) => [f, await api.gitBranch(f)] as const))
   const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
@@ -685,7 +688,9 @@ export function buildPane(saved: SavedPane, project: Project): PaneState {
     projectId: project.id,
     tabs,
     activeTabId: tabs[Math.min(saved.activeIndex, tabs.length - 1)].id,
-    fontSize: clampFontSize(saved.fontSize)
+    fontSize: clampFontSize(saved.fontSize),
+    folder: saved.folder,
+    compare: saved.compare
   }
 }
 
@@ -747,8 +752,8 @@ function visibleFolders(state: AppState): string[] {
   const folders = new Set<string>()
   for (const pane of state.panes) {
     if (state.maximizedId && state.maximizedId !== pane.id) continue
-    const project = projectById(state, pane.projectId)
-    if (project) folders.add(project.folder)
+    const folder = folderOfPane(state, pane)
+    if (folder) folders.add(folder)
   }
   return [...folders]
 }

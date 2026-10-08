@@ -8,6 +8,7 @@ import { initialUpdateState, type UpdateState } from '../shared/updates'
 import type {
   AgentKind,
   AppInfo,
+  CompareLink,
   CodexSession,
   GeminiSession,
   GitChanges,
@@ -32,6 +33,7 @@ export interface TermState {
   retried?: boolean
   agentsOpen?: boolean
   command?: string
+  prompt?: string
   task?: { agents: AgentKind[]; before: ToolReport[] }
 }
 
@@ -41,6 +43,8 @@ export interface PaneState {
   tabs: TermState[]
   activeTabId: string
   fontSize: number
+  folder?: string
+  compare?: CompareLink
 }
 
 export type QuickPickMode = 'new' | 'resume'
@@ -181,6 +185,9 @@ export const store = new Store()
 export const projectById = (state: AppState, id: string): Project | undefined =>
   state.settings.projects.find((p) => p.id === id) ??
   (id === AGENTS_PROJECT_ID ? { id, name: 'Agents', folder: state.info.home, defaultAgent: 'claude' } : undefined)
+
+export const folderOfPane = (state: AppState, pane: PaneState): string | null =>
+  pane.folder ?? projectById(state, pane.projectId)?.folder ?? null
 
 export const paneById = (state: AppState, id: string | null): PaneState | undefined =>
   id ? state.panes.find((p) => p.id === id) : undefined

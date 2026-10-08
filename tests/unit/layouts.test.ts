@@ -62,7 +62,7 @@ describe('snapshotWorkspace', () => {
   })
 
   it('lets the caller supply session ids such as ones matched from the agent folders', () => {
-    const result = snapshotWorkspace(panes, null, (tab) => tab.sessionId ?? `matched-${tab.id}`)
+    const result = snapshotWorkspace(panes, null, { sessionFor: (tab) => tab.sessionId ?? `matched-${tab.id}` })
     expect(result.panes[1].tabs[0].sessionId).toBe('matched-t4')
     expect(result.panes[0].tabs[1].sessionId).toBeUndefined()
     expect(result.focusedIndex).toBe(0)

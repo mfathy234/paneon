@@ -53,7 +53,7 @@ function sessionResolver(): (tab: SnapshotTab) => string | undefined {
 
 export async function saveCurrentLayout(): Promise<SavedLayout | null> {
   const panes = savablePanes()
-  const workspace = snapshotWorkspace(panes, store.state.focusedId, sessionResolver())
+  const workspace = snapshotWorkspace(panes, store.state.focusedId, { sessionFor: sessionResolver(), portable: true })
   if (workspace.panes.length === 0) {
     toast('Open a session first, then save the layout.', 'info')
     return null

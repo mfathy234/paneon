@@ -4,7 +4,7 @@ import { saveSettings } from './actions'
 import { confirmDialog } from './components/dialogs'
 import { snippetDialog } from './components/snippetDialog'
 import { toast } from './components/toast'
-import { newId, paneById, projectById, store } from './state'
+import { folderOfPane, newId, paneById, projectById, store } from './state'
 import { getTerminal } from './terminals'
 
 function setSnippets(snippets: Snippet[]): void {
@@ -31,11 +31,12 @@ export function insertSnippet(snippet: Snippet): boolean {
     toast(`Select some text in the terminal first, then insert '${snippet.name}' again.`, 'info')
     return false
   }
+  const folder = folderOfPane(state, pane) ?? project.folder
   const text = expandSnippet(snippet.text, {
     selection,
-    branch: state.branches[project.folder] ?? '',
+    branch: state.branches[folder] ?? '',
     project: project.name,
-    folder: project.folder
+    folder
   })
   const { flattened } = view.insertText(text)
   const note = flattened ? ' Its line breaks were joined because this terminal does not accept pasted lines.' : ''

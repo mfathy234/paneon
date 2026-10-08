@@ -14,7 +14,7 @@ test('top bar shows the brand and the split New session button picks the agent',
     await expect(chevron).toHaveAttribute('aria-expanded', 'false')
     await chevron.click()
     await expect(chevron).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.getByRole('menuitem')).toHaveText(['CClaude session', 'XCodex session', 'GGemini session', 'Resume a session…Ctrl+Shift+R'])
+    await expect(page.getByRole('menuitem')).toHaveText(['CClaude session', 'XCodex session', 'GGemini session', 'Resume a session…Ctrl+Shift+R', 'Ask two agents…Ctrl+Shift+A'])
     await expect(page.getByRole('menuitem', { name: /Claude session/ })).toBeFocused()
 
     await page.keyboard.press('ArrowDown')

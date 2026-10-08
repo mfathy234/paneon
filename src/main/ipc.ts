@@ -1,10 +1,20 @@
 import { statSync } from 'node:fs'
 import { BrowserWindow, clipboard, dialog, ipcMain, shell, app } from 'electron'
 import { IPC } from '../shared/ipc'
-import type { AgentKind, FolderCheck, NotifyRequest, QuickOpenKind, ResumeQuery, Settings, SpawnRequest } from '../shared/types'
+import type {
+  AgentKind,
+  FolderCheck,
+  NotifyRequest,
+  QuickOpenKind,
+  ResumeQuery,
+  Settings,
+  SpawnRequest,
+  WorktreeRemoval
+} from '../shared/types'
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { notifyUser, quickOpen } from './desktop'
+import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { currentBranch, gitChanges } from './git'
 import { checkAgentTools } from './agentTools'
 import { bridgeDirs, claudeSettingsPath } from './paths'
@@ -100,6 +110,10 @@ export function registerIpc(
   ipcMain.on(IPC.ptyWrite, (_event, id: string, data: string) => ptys.write(id, data))
   ipcMain.on(IPC.ptyResize, (_event, id: string, cols: number, rows: number) => ptys.resize(id, cols, rows))
   ipcMain.handle(IPC.ptyKill, (_event, id: string) => ptys.kill(id))
+  ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
+  ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
+  ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))
+  ipcMain.handle(IPC.compareRemove, (_event, request: WorktreeRemoval) => removeWorktree(request))
   ipcMain.handle(IPC.clipboardRead, () => clipboard.readText())
   ipcMain.handle(IPC.clipboardWrite, (_event, text: string) => clipboard.writeText(String(text)))
   ipcMain.handle(IPC.openExternal, async (_event, url: string) => {

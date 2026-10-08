@@ -3,6 +3,7 @@ import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import * as pty from 'node-pty'
 import { claudeCommand, codexCommand, geminiCommand, launchSpec, shellCommand } from './agentLaunch'
+import { windowsCommandLine } from './commandLine'
 import type { AppInfo, SpawnRequest, SpawnResult } from '../shared/types'
 
 const FLUSH_MS = 8
@@ -43,7 +44,7 @@ export class PtyManager {
     if (typeof spec === 'string') return { ok: false, error: spec }
     this.kill(request.id)
     try {
-      const child = pty.spawn(spec.file, spec.args, {
+      const child = pty.spawn(spec.file, windowsCommandLine(spec.args), {
         name: 'xterm-256color',
         cols: Math.max(2, request.cols),
         rows: Math.max(1, request.rows),

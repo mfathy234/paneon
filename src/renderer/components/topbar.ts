@@ -10,6 +10,7 @@ import {
 import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
+import { openCompareDialog } from '../compareActions'
 import { ICONS, logoMark } from '../icons'
 import { agentMark } from './agentMark'
 import { countSessions, type PaneView } from '../derive'
@@ -177,7 +178,23 @@ export class TopBarComponent {
       'Resume a session…',
       h('span', { class: 'kbd' }, 'Ctrl+Shift+R')
     )
-    items.push(resume)
+    const compare = h(
+      'button',
+      {
+        class: 'menu-item',
+        type: 'button',
+        role: 'menuitem',
+        id: 'compare-menu-item',
+        onClick: () => {
+          this.closeAgentMenu()
+          openCompareDialog()
+        }
+      },
+      icon(ICONS.compare),
+      'Ask two agents…',
+      h('span', { class: 'kbd' }, 'Ctrl+Shift+A')
+    )
+    items.push(resume, compare)
     const rect = this.newSession.getBoundingClientRect()
     this.agentMenu = h(
       'div',

@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { claudeFallbackDirs, resolveExecutable, splitArgs } from './executables'
+import { AGENT_NAMES } from '../shared/agents'
+import { promptArgs } from '../shared/compare'
 import type { AgentKind, SpawnRequest } from '../shared/types'
 
 export interface LaunchSpec {
@@ -108,20 +110,43 @@ export function launchSpec(request: SpawnRequest): LaunchSpec | string {
     if (!base) return `Could not find ${codexCommand()}. Install Codex CLI (npm i -g @openai/codex) or set PANEON_CODEX_COMMAND.`
     const overridden = Boolean(process.env.PANEON_CODEX_COMMAND)
     const extra = splitArgs(process.env.PANEON_CODEX_ARGS)
-    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden)] }
+    const initial = promptFor(base, request)
+    if (typeof initial === 'string') return initial
+    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
   }
   if (request.agent === 'gemini') {
     const base = resolveGemini(pathDirs)
     if (!base) return `Could not find ${geminiCommand()}. Install Gemini CLI (npm i -g @google/gemini-cli) or set PANEON_GEMINI_COMMAND.`
     const overridden = Boolean(process.env.PANEON_GEMINI_COMMAND)
     const extra = splitArgs(process.env.PANEON_GEMINI_ARGS)
-    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden)] }
+    const initial = promptFor(base, request)
+    if (typeof initial === 'string') return initial
+    return { file: base.file, args: [...base.args, ...extra, ...agentArgs(request, overridden), ...initial] }
   }
   const command = claudeCommand()
   const file = resolveExecutable(command, claudeFallbackDirs())
   if (!file) return `Could not find ${command}. Install Claude Code or set PANEON_CLAUDE_COMMAND.`
-  const args = [...splitArgs(process.env.PANEON_CLAUDE_ARGS), ...agentArgs(request, Boolean(process.env.PANEON_CLAUDE_COMMAND))]
+  const initial = promptFor({ file, args: [] }, request)
+  if (typeof initial === 'string') return initial
+  const args = [
+    ...splitArgs(process.env.PANEON_CLAUDE_ARGS),
+    ...agentArgs(request, Boolean(process.env.PANEON_CLAUDE_COMMAND)),
+    ...initial
+  ]
   return { file, args }
+}
+
+function viaCmdShim(base: LaunchSpec): boolean {
+  const name = (base.file.split(/[\\/]/).pop() ?? '').toLowerCase()
+  return name === 'cmd.exe' && base.args[0] === '/d'
+}
+
+function promptFor(base: LaunchSpec, request: Pick<SpawnRequest, 'agent' | 'prompt'>): string[] | string {
+  if (!request.prompt || request.agent === 'shell') return []
+  if (viaCmdShim(base)) {
+    return `${AGENT_NAMES[request.agent]} is installed as a .cmd shim, which cannot take a prompt safely. Install it again with npm i -g so its native program is found, or start it without a prompt.`
+  }
+  return promptArgs(request.agent, request.prompt)
 }
 
 export const codexHome = (): string => process.env.PANEON_CODEX_HOME ?? join(process.env.USERPROFILE ?? homedir(), '.codex')

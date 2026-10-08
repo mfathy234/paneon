@@ -6,6 +6,8 @@ import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
   type BackgroundImage,
+  type CompareLink,
+  type CompareNames,
   type Project,
   type SavedLayout,
   type SavedPane,
@@ -99,6 +101,31 @@ function sanitizeTab(value: unknown): SavedTab | null {
   return tab
 }
 
+function sanitizeSide(value: unknown): { path: string; branch: string } | null {
+  if (!isRecord(value)) return null
+  const path = asString(value.path)
+  const branch = asString(value.branch)
+  return path && branch ? { path, branch } : null
+}
+
+function sanitizeSides(value: unknown): CompareNames | null {
+  if (!isRecord(value)) return null
+  const a = sanitizeSide(value.a)
+  const b = sanitizeSide(value.b)
+  return a && b ? { a, b } : null
+}
+
+export const COMPARE_PROMPT_LIMIT = 8000
+
+function sanitizeCompare(value: unknown): CompareLink | null {
+  if (!isRecord(value)) return null
+  const id = asString(value.id)
+  const repo = asString(value.repo)
+  if (!id || !repo || (value.slot !== 'a' && value.slot !== 'b')) return null
+  const prompt = typeof value.prompt === 'string' ? value.prompt.slice(0, COMPARE_PROMPT_LIMIT) : ''
+  return { id, slot: value.slot, prompt, repo, sides: sanitizeSides(value.sides) }
+}
+
 function sanitizePane(item: unknown): SavedPane | null {
   if (!isRecord(item)) return null
   const projectId = asString(item.projectId)
@@ -109,7 +136,12 @@ function sanitizePane(item: unknown): SavedPane | null {
   if (tabs.length === 0) return null
   const activeIndex = clampNumber(item.activeIndex, 0, tabs.length - 1, 0)
   const fontSize = clampFontSize(typeof item.fontSize === 'number' ? item.fontSize : DEFAULT_FONT_SIZE)
-  return { projectId, tabs, activeIndex: Math.round(activeIndex), fontSize }
+  const pane: SavedPane = { projectId, tabs, activeIndex: Math.round(activeIndex), fontSize }
+  const folder = asString(item.folder)
+  if (folder) pane.folder = folder
+  const compare = sanitizeCompare(item.compare)
+  if (compare) pane.compare = compare
+  return pane
 }
 
 function sanitizePanes(value: unknown): SavedPane[] {

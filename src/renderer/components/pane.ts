@@ -33,6 +33,7 @@ export class PaneComponent {
   private readonly index = h('span', { class: 'pane-title' })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
   private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
+  private readonly compareChip = h('span', { class: 'chip chip-compare', hidden: true })
   private readonly branch = h('span', { class: 'chip', hidden: true })
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly statusWord = h('span', { class: 'status' })
@@ -61,6 +62,7 @@ export class PaneComponent {
       this.index,
       this.fresh,
       this.resumed,
+      this.compareChip,
       this.branch,
       this.statusWord,
       this.attentionWord,
@@ -98,6 +100,10 @@ export class PaneComponent {
     this.fresh.hidden = view.named
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
+    const link = view.pane.compare
+    this.compareChip.hidden = !link
+    this.compareChip.textContent = link ? link.slot.toUpperCase() : ''
+    this.compareChip.title = link ? `Side ${link.slot.toUpperCase()} of a comparison` : ''
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
     this.el.classList.toggle('maximized', maximized)

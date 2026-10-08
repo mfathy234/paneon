@@ -5,7 +5,7 @@ import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsF
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, SessionFile, StatusInfo, TabAgent } from '../shared/types'
-import { projectById, type AppState, type PaneState, type TermState } from './state'
+import { folderOfPane, projectById, type AppState, type PaneState, type TermState } from './state'
 
 export type PaneStatus = 'busy' | 'idle' | 'exited'
 
@@ -63,11 +63,11 @@ interface Matches {
 
 function liveTabs(state: AppState, agent: TabAgent) {
   return state.panes.flatMap((pane) => {
-    const project = projectById(state, pane.projectId)
-    if (!project) return []
+    const cwd = folderOfPane(state, pane)
+    if (!cwd) return []
     return pane.tabs
       .filter((tab) => tab.agent === agent && tab.status !== 'exited')
-      .map((tab) => ({ tab, cwd: project.folder }))
+      .map((tab) => ({ tab, cwd }))
   })
 }
 
@@ -191,11 +191,11 @@ function infoFor(
   state: AppState,
   tab: TermState,
   matches: Matches,
-  project: Project | undefined,
+  folder: string | null,
   snapshot: OpsSnapshot | null,
   opsLive: boolean
 ): PaneInfo {
-  const changes = project ? (state.gitChanges[project.folder] ?? null) : null
+  const changes = folder ? (state.gitChanges[folder] ?? null) : null
   const empty: PaneInfo = { model: null, contextPercent: null, costUsd: null, ageMs: null, changes, ops: null }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
@@ -222,6 +222,7 @@ export function derivePanes(state: AppState): PaneView[] {
   const matches = matchAll(state)
   return state.panes.map((pane, index) => {
     const project = projectById(state, pane.projectId)
+    const folder = folderOfPane(state, pane)
     const primary = primaryTab(pane)
     const { title, named } = titleFor(pane, matches, project)
     const active = pane.tabs.find((t) => t.id === pane.activeTabId) ?? pane.tabs[0]
@@ -242,12 +243,12 @@ export function derivePanes(state: AppState): PaneView[] {
       agentsOpen: primary.agentsOpen === true,
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
-      branch: project ? (state.branches[project.folder] ?? null) : null,
+      branch: folder ? (state.branches[folder] ?? null) : null,
       activeExited: active.status === 'exited',
       primaryTabId: primary.id,
       fileWaiting: primary.agent === 'claude' && sessionWaiting(matches.claude.get(primary.id)),
       attention: state.attention[pane.id] ?? 'none',
-      info: infoFor(state, primary, matches, project, snapshot, opsLive),
+      info: infoFor(state, primary, matches, folder, snapshot, opsLive),
       tabs: pane.tabs.map((tab) => ({
         id: tab.id,
         agent: tab.agent,

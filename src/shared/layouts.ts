@@ -1,5 +1,5 @@
 import { LAYOUT_NAME_MAX, MAX_LAYOUTS } from './settingsSchema'
-import type { Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
+import type { CompareLink, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
 
 export interface SnapshotTab {
   id: string
@@ -13,35 +13,49 @@ export interface SnapshotTab {
 export interface SnapshotPane {
   id: string
   projectId: string
+  folder?: string
+  compare?: CompareLink
   fontSize: number
   activeTabId: string
   tabs: SnapshotTab[]
 }
 
+export interface SnapshotOptions {
+  sessionFor?: (tab: SnapshotTab) => string | undefined
+  portable?: boolean
+}
+
 export function snapshotWorkspace(
   panes: SnapshotPane[],
   focusedId: string | null,
-  sessionFor: (tab: SnapshotTab) => string | undefined = (tab) => tab.sessionId
+  options: SnapshotOptions = {}
 ): Workspace {
+  const sessionFor = options.sessionFor ?? ((tab: SnapshotTab) => tab.sessionId)
   const kept = panes
     .map((pane) => ({ ...pane, tabs: pane.tabs.filter((tab) => tab.task === undefined) }))
     .filter((pane) => pane.tabs.length > 0)
   const focusedIndex = Math.max(0, kept.findIndex((pane) => pane.id === focusedId))
   return {
     focusedIndex,
-    panes: kept.map(
-      (pane): SavedPane => ({
+    panes: kept.map((pane): SavedPane => {
+      const detached = options.portable === true && (pane.compare !== undefined || pane.folder !== undefined)
+      const saved: SavedPane = {
         projectId: pane.projectId,
         fontSize: pane.fontSize,
         activeIndex: Math.max(0, pane.tabs.findIndex((tab) => tab.id === pane.activeTabId)),
         tabs: pane.tabs.map((tab) => ({
           agent: tab.agent,
           label: tab.label,
-          sessionId: tab.agent === 'shell' ? undefined : sessionFor(tab),
+          sessionId: tab.agent === 'shell' || detached ? undefined : sessionFor(tab),
           agentsOpen: tab.agentsOpen === true ? true : undefined
         }))
-      })
-    )
+      }
+      if (options.portable !== true) {
+        if (pane.folder) saved.folder = pane.folder
+        if (pane.compare) saved.compare = pane.compare
+      }
+      return saved
+    })
   }
 }
 

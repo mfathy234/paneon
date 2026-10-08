@@ -126,6 +126,47 @@ describe('launchSpec', () => {
     expect(launchSpec(request({ agent: 'gemini' }))).toContain('Could not find')
   })
 
+  it('appends the initial prompt after the agent arguments, even for overridden commands', () => {
+    process.env.PANEON_CLAUDE_COMMAND = process.execPath
+    process.env.PANEON_CODEX_COMMAND = process.execPath
+    process.env.PANEON_GEMINI_COMMAND = process.execPath
+    process.env.PANEON_CODEX_ARGS = '["--flag"]'
+    const prompt = 'Why does the "login" test fail?\nSecond line'
+    expect(launchSpec(request({ agent: 'claude', prompt }))).toEqual({ file: process.execPath, args: [prompt] })
+    expect(launchSpec(request({ agent: 'codex', prompt }))).toEqual({ file: process.execPath, args: ['--flag', prompt] })
+    expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1', prompt }))).toEqual({
+      file: process.execPath,
+      args: [`--prompt-interactive=${prompt}`]
+    })
+  })
+
+  it('adds the prompt after the session id Gemini gets by default and never to a shell tab', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cg-gemini-prompt-'))
+    const bundle = join(dir, 'node_modules', '@google', 'gemini-cli', 'bundle')
+    mkdirSync(bundle, { recursive: true })
+    writeFileSync(join(dir, 'gemini.cmd'), '', 'utf8')
+    writeFileSync(join(bundle, 'gemini.js'), '', 'utf8')
+    writeFileSync(join(dir, 'node.exe'), '', 'utf8')
+    delete process.env.PANEON_GEMINI_COMMAND
+    process.env.PATH = dir
+    expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1', prompt: 'hi there' }))).toEqual({
+      file: join(dir, 'node.exe'),
+      args: [join(bundle, 'gemini.js'), '--session-id', 'u-1', '--prompt-interactive=hi there']
+    })
+    process.env.PANEON_SHELL = process.execPath
+    expect(launchSpec(request({ agent: 'shell', prompt: 'ignored' }))).toEqual({ file: process.execPath, args: [] })
+  })
+
+  it('refuses a prompt for an agent that can only be started through a .cmd shim', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cg-codex-shim-'))
+    writeFileSync(join(dir, 'codex.cmd'), '', 'utf8')
+    delete process.env.PANEON_CODEX_COMMAND
+    process.env.PATH = dir
+    process.env.ComSpec = 'C:\\Windows\\System32\\cmd.exe'
+    expect(launchSpec(request({ agent: 'codex', prompt: 'a & b' }))).toContain('.cmd shim')
+    expect(typeof launchSpec(request({ agent: 'codex' }))).toBe('object')
+  })
+
   it('splits PANEON_CODEX_ARGS', () => {
     process.env.PANEON_CODEX_COMMAND = process.execPath
     process.env.PANEON_CODEX_ARGS = '["--flag","two words"]'

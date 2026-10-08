@@ -25,6 +25,7 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
+import { installCompareCommands } from './commands/compare'
 import { installLayoutCommands } from './commands/layouts'
 import { installSnippetCommands } from './commands/snippets'
 import { installKeyboard } from './keyboard'
@@ -88,6 +89,7 @@ async function boot(): Promise<void> {
   void installOps()
   installBuiltinCommands()
   installLayoutCommands()
+  installCompareCommands()
   installSnippetCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)

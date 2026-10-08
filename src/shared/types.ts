@@ -22,6 +22,24 @@ export interface ThemeSettings {
   image: BackgroundImage
 }
 
+export interface CompareSide {
+  path: string
+  branch: string
+}
+
+export interface CompareNames {
+  a: CompareSide
+  b: CompareSide
+}
+
+export interface CompareLink {
+  id: string
+  slot: 'a' | 'b'
+  prompt: string
+  repo: string
+  sides: CompareNames | null
+}
+
 export interface SavedTab {
   agent: TabAgent
   label: string
@@ -31,6 +49,8 @@ export interface SavedTab {
 
 export interface SavedPane {
   projectId: string
+  folder?: string
+  compare?: CompareLink
   tabs: SavedTab[]
   activeIndex: number
   fontSize: number
@@ -200,9 +220,27 @@ export interface SpawnRequest {
   cols: number
   rows: number
   command?: string
+  prompt?: string
 }
 
 export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string }
+
+export interface RepoProbe {
+  isRepo: boolean
+  hasCommits: boolean
+  branch: string | null
+}
+
+export type WorktreesResult = { ok: true; sides: CompareNames } | { ok: false; error: string }
+
+export interface WorktreeRemoval {
+  repo: string
+  path: string
+  branch: string
+  force: boolean
+}
+
+export type GitResult = { ok: true } | { ok: false; error: string }
 
 export interface FolderCheck {
   ok: boolean
