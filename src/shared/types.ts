@@ -54,6 +54,8 @@ export interface Settings {
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace
+  lastSeenVersion: string | null
+  autoUpdateCheck: boolean
 }
 
 export interface SettingsLoadResult {
@@ -195,6 +197,7 @@ export interface AppInfo {
   shellCommand: string
   home: string
   userData: string
+  version: string
 }
 
 export const DEFAULT_FONT_SIZE = 15

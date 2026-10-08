@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import type { OpsSnapshot } from '../shared/opsFeed'
+import type { UpdateState } from '../shared/updates'
 import type { CodexSession, GeminiSession, SessionFile, StatusInfo } from '../shared/types'
 
 function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) => void): () => void {
@@ -56,6 +57,14 @@ const api: GridApi = {
   },
   onCliNotice: (listener) => subscribe<[string, boolean]>(IPC.cliNotice, listener),
   cliReady: () => ipcRenderer.send(IPC.cliReady),
+  getUpdateState: () => ipcRenderer.invoke(IPC.updateGet),
+  onUpdateState: (listener) => subscribe<[UpdateState]>(IPC.updateState, listener),
+  checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck),
+  downloadUpdate: () => ipcRenderer.invoke(IPC.updateDownload),
+  retryUpdate: () => ipcRenderer.invoke(IPC.updateRetry),
+  dismissUpdate: () => ipcRenderer.invoke(IPC.updateDismiss),
+  restartToUpdate: () => ipcRenderer.invoke(IPC.updateRestart),
+  openUpdateLink: (url) => ipcRenderer.invoke(IPC.updateOpenLink, url),
   onFlushRequest: (listener) => {
     ipcRenderer.on(IPC.flushRequest, () => {
       void listener().finally(() => ipcRenderer.send(IPC.flushDone))

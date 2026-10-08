@@ -1,4 +1,5 @@
-import { openQuickPick, openResumePicker, toggleThemePicker, zoomAll, showView } from '../actions'
+import { openQuickPick, openResumePicker, toggleThemePicker, toggleUpdatePopover, zoomAll, showView } from '../actions'
+import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { ICONS, logoMark } from '../icons'
@@ -49,6 +50,16 @@ export class TopBarComponent {
   private readonly agentsDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly agents = h('button', { class: 'btn ghost', type: 'button', id: 'agents-button' }, 'Agents', this.agentsDot)
   private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
+  readonly updatePill = h('button', {
+    class: 'update-pill',
+    type: 'button',
+    id: 'update-pill',
+    hidden: true,
+    'aria-haspopup': 'dialog',
+    onClick: () => toggleUpdatePopover()
+  })
+  private readonly pillText = h('span', { class: 'pill-text' })
+  private readonly pillLine = h('span', { class: 'pill-line' })
   private readonly limits = h('span', { class: 'topbar-limits', hidden: true })
   private limitsSignature = ''
 
@@ -68,6 +79,7 @@ export class TopBarComponent {
       this.projects,
       this.agents,
       this.count,
+      this.updatePill,
       h('span', { class: 'spacer' }),
       this.limits,
       h('button', { class: 'btn ghost compact', type: 'button', 'aria-label': 'Decrease font size', onClick: () => zoomAll(-1) }, 'A−'),
@@ -84,12 +96,25 @@ export class TopBarComponent {
     const updates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.agentsDot.hidden = !updates
     this.agents.setAttribute('aria-label', updates ? 'Agents, updates available' : 'Agents')
+    this.updatePillState(state)
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
     this.count.replaceChildren(
       `${sessions} session${sessions === 1 ? '' : 's'}`,
       ' · ',
       h('span', { class: busy > 0 ? 'busy' : '' }, `${busy} busy`)
     )
+  }
+
+  private updatePillState(state: AppState): void {
+    const { update } = state
+    const visible = showUpdatePill(update)
+    this.updatePill.hidden = !visible
+    if (!visible) return
+    this.updatePill.className = `update-pill status-${update.status}`
+    this.updatePill.setAttribute('aria-expanded', String(state.updatePopoverOpen))
+    this.pillText.textContent = pillLabel(update)
+    this.pillLine.style.width = update.status === 'downloading' ? `${Math.round(update.percent)}%` : '0'
+    this.updatePill.replaceChildren(this.pillText, this.pillLine)
   }
 
   private readonly outside = (event: Event): void => {

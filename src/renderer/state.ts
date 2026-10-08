@@ -3,6 +3,8 @@ import type { AgentPreset } from '../shared/quickPick'
 import type { AgentsReport, ToolReport } from '../shared/agentTools'
 import type { Attention } from '../shared/attention'
 import type { OpsSnapshot } from '../shared/opsFeed'
+import type { ChangelogEntry } from '../shared/changelog'
+import { initialUpdateState, type UpdateState } from '../shared/updates'
 import type {
   AgentKind,
   AppInfo,
@@ -59,6 +61,12 @@ export interface BridgeState {
   note: string | null
 }
 
+export interface WhatsNewView {
+  version: string
+  from: string | null
+  entries: ChangelogEntry[]
+}
+
 export interface AppState {
   ready: boolean
   settings: Settings
@@ -88,6 +96,9 @@ export interface AppState {
   resumeProjectId: string | null
   onboardingOpen: boolean
   themePickerOpen: boolean
+  update: UpdateState
+  updatePopoverOpen: boolean
+  whatsNew: WhatsNewView | null
   info: AppInfo
 }
 
@@ -120,7 +131,10 @@ export const initialState = (): AppState => ({
   resumeProjectId: null,
   onboardingOpen: false,
   themePickerOpen: false,
-  info: { claudeCommand: 'claude.exe', codexCommand: 'codex', geminiCommand: 'gemini', shellCommand: 'powershell.exe', home: '', userData: '' }
+  update: initialUpdateState(),
+  updatePopoverOpen: false,
+  whatsNew: null,
+  info: { claudeCommand: 'claude.exe', codexCommand: 'codex', geminiCommand: 'gemini', shellCommand: 'powershell.exe', home: '', userData: '', version: '' }
 })
 
 type Listener = (state: AppState) => void

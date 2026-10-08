@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
 import { BrowserWindow, Notification, shell } from 'electron'
 import { IPC } from '../shared/ipc'
+import { safeLink } from '../shared/markdown'
 import type { NotifyRequest, QuickOpenKind } from '../shared/types'
 
 function logTo(file: string, line: string): void {
@@ -22,6 +23,14 @@ export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<vo
   const child = spawn(`code "${folder}"`, { shell: true, detached: true, stdio: 'ignore', windowsHide: true })
   child.on('error', () => undefined)
   child.unref()
+}
+
+export async function openLink(url: string): Promise<void> {
+  const href = safeLink(url)
+  if (!href) return
+  const log = process.env.PANEON_OPEN_LOG
+  if (log) return logTo(log, JSON.stringify({ link: href }))
+  await shell.openExternal(href)
 }
 
 export function notifyUser(window: BrowserWindow | null, request: NotifyRequest): void {

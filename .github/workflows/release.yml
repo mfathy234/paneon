@@ -36,17 +36,31 @@ jobs:
         run: npx vitest run
       - name: Package
         run: npm run package -- --publish never
+      - name: Check the update manifest
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -q "^version: ${version}$" release/latest.yml
+          grep -q "Paneon-Setup-${version}.exe" release/latest.yml
+          test -f "release/Paneon-Setup-${version}.exe.blockmap"
       - name: Create the GitHub Release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${GITHUB_REF_NAME#v}"
+          node scripts/release-notes.mjs "${version}" build/release-notes.md --optional
+          if [ -s build/release-notes.md ]; then
+            notes=(--notes-file build/release-notes.md)
+          else
+            echo "No CHANGELOG.md section for ${version}; using generated notes"
+            notes=(--generate-notes)
+          fi
           gh release create "${GITHUB_REF_NAME}" \
             "release/Paneon-Setup-${version}.exe" \
             "release/Paneon-Setup-${version}.exe.blockmap" \
             "release/Paneon-Portable-${version}.exe" \
             "release/latest.yml" \
             --title "Paneon ${version}" \
-            --generate-notes \
+            "${notes[@]}" \
             --verify-tag

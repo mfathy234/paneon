@@ -1,6 +1,7 @@
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
 import type { OpsSnapshot } from './opsFeed'
+import type { UpdateState } from './updates'
 import type {
   AgentKind,
   AppInfo,
@@ -66,5 +67,13 @@ export interface GridApi {
   onCliRun(listener: (command: CliCommand) => Promise<CliReply>): void
   onCliNotice(listener: (text: string, ok: boolean) => void): () => void
   cliReady(): void
+  getUpdateState(): Promise<UpdateState>
+  onUpdateState(listener: (state: UpdateState) => void): () => void
+  checkForUpdate(): Promise<void>
+  downloadUpdate(): Promise<void>
+  retryUpdate(): Promise<void>
+  dismissUpdate(): Promise<void>
+  restartToUpdate(): Promise<void>
+  openUpdateLink(url: string): Promise<void>
   onFlushRequest(listener: () => Promise<void>): void
 }

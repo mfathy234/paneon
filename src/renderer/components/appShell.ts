@@ -9,6 +9,8 @@ import { QuickPickComponent } from './quickpick'
 import { ResumePickerComponent } from './resumePicker'
 import { SidebarComponent } from './sidebar'
 import { ThemePickerComponent } from './themePicker'
+import { UpdatePopoverComponent } from './updatePopover'
+import { WhatsNewComponent } from './whatsNew'
 import { TopBarComponent } from './topbar'
 
 export class AppShell {
@@ -22,6 +24,8 @@ export class AppShell {
   private readonly resumePicker = new ResumePickerComponent(() => this.topbar.newSession)
   private readonly onboarding = new OnboardingComponent()
   private readonly themePicker = new ThemePickerComponent(() => this.topbar.themeButton)
+  private readonly updatePopover = new UpdatePopoverComponent(() => this.topbar.updatePill)
+  private readonly whatsNew = new WhatsNewComponent()
   private lastView: AppState['view'] = 'grid'
 
   constructor() {
@@ -45,5 +49,7 @@ export class AppShell {
     this.resumePicker.update(state)
     this.onboarding.update(state)
     this.themePicker.update(state)
+    this.updatePopover.update(state)
+    this.whatsNew.update(state)
   }
 }

@@ -3,6 +3,21 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-10-08
+
+### Added
+
+- In-app updates. The installed build checks GitHub Releases 10 seconds after start and every 6 hours, and shows an
+  "Update" pill in the top bar. **Update now** downloads in the background while your sessions keep running, then
+  **Restart now** (or quitting) installs it and your open sessions reopen. **Later** hides the pill until a newer version
+  appears. The portable build only points you to the release page.
+- An Updates section in the Theme popover: automatic checks on or off, a status line, **Check now** and **What's new**.
+- A What's new dialog after an update, listing every release since the version you had before.
+
+### Fixed
+
+- Taskbar and notifications now show Paneon's own icon and name.
+
 ## [0.3.0] - 2026-10-08
 
 ### Added

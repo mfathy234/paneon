@@ -15,10 +15,14 @@ import { resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
 import { CliRunner } from './cliRunner'
 import { startCliServer } from './cliServer'
+import { setupUpdates } from './updates'
+import type { UpdateController } from './updateController'
 
 const IMAGE_SCHEME = 'cg-image'
 const QUIT_KILL_TIMEOUT_MS = 2000
 const FLUSH_TIMEOUT_MS = 1000
+
+app.setAppUserModelId('io.github.mfathy234.paneon')
 
 if (process.env.PANEON_USER_DATA) app.setPath('userData', process.env.PANEON_USER_DATA)
 
@@ -28,6 +32,8 @@ protocol.registerSchemesAsPrivileged([
 
 let mainWindow: BrowserWindow | null = null
 let cli: CliRunner | null = null
+let updates: UpdateController | null = null
+let quitting = false
 
 const gotLock = app.requestSingleInstanceLock()
 
@@ -142,19 +148,33 @@ app.whenReady().then(() => {
     statusWatcher.start()
     opsWatcher.start()
   })
-  let quitting = false
-  app.on('before-quit', (event) => {
-    if (quitting) return
-    quitting = true
-    event.preventDefault()
+  const shutdown = async (): Promise<void> => {
     watcher.stop()
     codexWatcher.stop()
     geminiWatcher.stop()
     statusWatcher.stop()
     opsWatcher.stop()
-    void flushRenderer()
-      .then(() => ptys.terminateAll(QUIT_KILL_TIMEOUT_MS))
-      .finally(() => app.exit(0))
+    updates?.stop()
+    await flushRenderer()
+    await ptys.terminateAll(QUIT_KILL_TIMEOUT_MS)
+  }
+  updates = setupUpdates({
+    settings: store,
+    send,
+    shutdown,
+    markQuitting: () => {
+      quitting = true
+    }
+  })
+  app.on('before-quit', (event) => {
+    if (quitting) return
+    quitting = true
+    event.preventDefault()
+    void shutdown()
+      .catch(() => undefined)
+      .finally(() => {
+        if (!updates?.installOnQuit()) app.exit(0)
+      })
   })
 })
 

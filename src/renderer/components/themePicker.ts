@@ -1,4 +1,16 @@
-import { disableBridge, enableBridge, openOnboarding, setImage, setSessionInfo, setTheme, toggleThemePicker } from '../actions'
+import {
+  disableBridge,
+  enableBridge,
+  openOnboarding,
+  openWhatsNew,
+  runUpdateAction,
+  setAutoUpdateCheck,
+  setImage,
+  setSessionInfo,
+  setTheme,
+  toggleThemePicker
+} from '../actions'
+import { updateStatusLine } from '../../shared/updates'
 import { api } from '../api'
 import { THEMES, findTheme } from '../../shared/themes'
 import { h } from '../dom'
@@ -58,7 +70,10 @@ export class ThemePickerComponent {
       theme.image.path,
       theme.image.enabled,
       state.settings.sessionInfo,
-      state.bridge
+      state.bridge,
+      state.settings.autoUpdateCheck,
+      state.update,
+      Math.floor(Date.now() / 60_000)
     ])
     if (signature === this.signature || !this.root) return
     this.signature = signature
@@ -70,6 +85,7 @@ export class ThemePickerComponent {
       active.kind === 'light' ? h('p', { class: 'note', id: 'light-note' }, LIGHT_NOTE) : null,
       this.imageSection(state),
       this.infoSection(state),
+      this.updatesSection(state),
       h(
         'div',
         { class: 'image-section' },
@@ -155,6 +171,24 @@ export class ThemePickerComponent {
       ),
       this.checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) =>
         setSessionInfo({ sound: value })
+      )
+    )
+  }
+
+  private updatesSection(state: AppState): HTMLElement {
+    const { update, settings } = state
+    const busy = update.status === 'checking' || update.status === 'downloading' || update.mode === 'dev'
+    return h(
+      'div',
+      { class: 'image-section updates-section' },
+      h('h3', { class: 'popover-subtitle' }, 'Updates'),
+      this.checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck),
+      h('p', { class: 'hint', id: 'update-status' }, updateStatusLine(update, Date.now())),
+      h(
+        'div',
+        { class: 'image-file' },
+        h('button', { class: 'btn ghost small', type: 'button', id: 'check-now', disabled: busy, onClick: () => void runUpdateAction('check') }, 'Check now'),
+        h('button', { class: 'btn ghost small', type: 'button', id: 'whats-new', onClick: () => openWhatsNew() }, "What's new")
       )
     )
   }

@@ -1,7 +1,7 @@
 {
   "name": "paneon",
   "productName": "Paneon",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "One window for all your AI coding agents: a grid of readable terminals for Claude Code, Codex CLI and Gemini CLI",
   "homepage": "https://github.com/mfathy234/paneon",
   "repository": {
@@ -18,7 +18,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "tsc --noEmit -p tsconfig.json && electron-vite build",
-    "package": "npm run build && electron-builder --win --config electron-builder.yml",
+    "package": "npm run build && node scripts/release-notes.mjs --optional && electron-builder --win --config electron-builder.yml -c.releaseInfo.releaseNotesFile=release-notes.md",
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
@@ -31,6 +31,7 @@
     "@xterm/addon-web-links": "0.12.0",
     "@xterm/addon-webgl": "0.19.0",
     "@xterm/xterm": "6.0.0",
+    "electron-updater": "6.8.9",
     "node-pty": "1.1.0"
   },
   "devDependencies": {

@@ -16,6 +16,7 @@ import type { StatusWatcher } from './statusWatcher'
 import { resolveExecutable } from './executables'
 import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
+import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 
 function checkFolder(path: string): FolderCheck {
@@ -78,7 +79,7 @@ export function registerIpc(
   ipcMain.handle(IPC.bridgeInstall, () => installBridge(locations()))
   ipcMain.handle(IPC.bridgeUninstall, () => uninstallBridge(locations()))
   ipcMain.handle(IPC.agentsCheck, (_event, force: unknown) => checkAgentTools(force === true))
-  ipcMain.handle(IPC.appInfo, () => ptys.info(app.getPath('userData')))
+  ipcMain.handle(IPC.appInfo, () => ({ ...ptys.info(app.getPath('userData')), version: appVersion() }))
   ipcMain.handle(IPC.pickFolder, async () => {
     const window = getWindow()
     const options = { title: 'Choose a project folder', properties: ['openDirectory' as const] }

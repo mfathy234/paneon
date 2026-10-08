@@ -2,6 +2,7 @@ import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import {
   flushWorkspace,
+  initWhatsNew,
   focusPane,
   handleTerminalExit,
   openOnboarding,
@@ -13,6 +14,7 @@ import {
   setCodexSessions,
   setGeminiSessions,
   setStatusInfos,
+  setUpdateState,
   zoomPane
 } from './actions'
 import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
@@ -35,15 +37,16 @@ function paneOfTerm(termId: string): string | undefined {
 }
 
 async function boot(): Promise<void> {
-  const [loaded, info, sessions, codexSessions, geminiSessions, statusInfos] = await Promise.all([
+  const [loaded, info, sessions, codexSessions, geminiSessions, statusInfos, update] = await Promise.all([
     api.getSettings(),
     api.appInfo(),
     api.listSessions(),
     api.listCodexSessions(),
     api.listGeminiSessions(),
-    api.listStatus()
+    api.listStatus(),
+    api.getUpdateState()
   ])
-  store.patch({ settings: loaded.settings, info, sessions, codexSessions, geminiSessions, ready: true })
+  store.patch({ settings: loaded.settings, info, sessions, codexSessions, geminiSessions, update, ready: true })
   const markStyle = document.documentElement.style
   markStyle.setProperty('--codex-bg', CODEX_MARK.background)
   markStyle.setProperty('--codex-fg', CODEX_MARK.color)
@@ -81,6 +84,8 @@ async function boot(): Promise<void> {
   installAttention()
   void installOps()
   installKeyboard()
+  api.onUpdateState(setUpdateState)
+  initWhatsNew()
   api.onFlushRequest(flushWorkspace)
   api.onCliRun(runCliCommand)
   api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))

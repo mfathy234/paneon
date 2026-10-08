@@ -41,6 +41,14 @@ export const IPC = {
   cliDone: 'cli:done',
   cliReady: 'cli:ready',
   cliNotice: 'cli:notice',
+  updateGet: 'update:get',
+  updateState: 'update:state',
+  updateCheck: 'update:check',
+  updateDownload: 'update:download',
+  updateRetry: 'update:retry',
+  updateDismiss: 'update:dismiss',
+  updateRestart: 'update:restart',
+  updateOpenLink: 'update:open-link',
   flushRequest: 'app:flush-request',
   flushDone: 'app:flush-done'
 } as const

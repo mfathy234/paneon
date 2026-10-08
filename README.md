@@ -44,6 +44,10 @@
 
 ![A PowerShell window running paneon ls, paneon start and paneon sessions next to the Paneon grid. The image is a composite of a real app screenshot and the real output of those commands.](docs/screenshots/cli.png)
 
+| Update available | What's new after an update |
+|---|---|
+| ![The Update 0.4.1 pill in the top bar with its popover: release notes, Update now and Later](docs/screenshots/update.png) | ![The What's new dialog listing the changes since the previous version](docs/screenshots/whats-new.png) |
+
 ## Supported agents
 
 | Agent | Command | Install | Resume | Session titles and status |
@@ -62,6 +66,22 @@ Paneon only reads the agents' own folders. It never writes to `~/.codex` or `~/.
 Requirements: Windows 10 or 11 (x64). Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
 
 The installer also puts the `paneon` command on your user PATH (open a new terminal after installing) and removes it again on uninstall. The portable build does not touch your PATH: run `Paneon-Portable-<version>.exe` directly, or copy it somewhere and add that folder to your PATH yourself. Arguments given to the portable exe are forwarded to the running Paneon, but its answers appear as a toast in the app instead of in the terminal.
+
+## Updates
+
+The installed build (`Paneon-Setup-<version>.exe`) updates itself from GitHub Releases:
+
+- 10 seconds after start and every 6 hours it checks for a newer release. An **Update 0.4.1** pill appears in the top bar, right of the session counts.
+- **Update now** downloads in the background (the pill shows the progress) while your sessions keep running. When it is ready the pill says **Restart to update**: **Restart now** installs it and your open sessions reopen, or choose **When I quit** and it installs the next time you close Paneon.
+- **Later** hides the pill until a newer version than the one you dismissed is found. A failed download shows **Update failed** with **Try again** and **Open GitHub**.
+- The Theme popover has an **Updates** section: turn automatic checks off, see when Paneon last checked, **Check now** and **What's new**.
+- After an update Paneon shows **What's new** once, with the changes of every version since the one you had (read from the bundled `CHANGELOG.md`). A fresh install shows the setup instead.
+
+The portable build (`Paneon-Portable-<version>.exe`) cannot replace itself: it tells you a new version exists and opens the release page. Development runs never check.
+
+Updates are not code signed, like the installer itself. Paneon verifies the downloaded file against the SHA-512 in the release's `latest.yml` and does not require a publisher signature.
+
+Version 0.3.0 and older have no updater: install 0.4.0 manually once, later versions arrive in the app.
 
 ## First run
 
@@ -197,6 +217,9 @@ The end-to-end tests launch the built app with a temporary user-data folder and 
 | `PANEON_OPS_DIR` | Read ops snapshots from this folder only. |
 | `PANEON_PIPE` | Name of the named pipe the `paneon` command uses (default `\\.\pipe\paneon-<user>`); set it to run a second, isolated instance. |
 | `PANEON_EXE`, `PANEON_APP_ARGS` | The `paneon` command: program and JSON array of arguments used to start the app when no pipe answers (default: the Paneon exe itself). |
+| `PANEON_UPDATE_START_DELAY_MS`, `PANEON_UPDATE_INTERVAL_MS` | Tests: delay of the first update check and the gap between checks (default 10 s and 6 h). |
+| `PANEON_TEST_UPDATER`, `PANEON_TEST_UPDATER_SCRIPT`, `PANEON_TEST_UPDATER_LOG` | Tests: `fake` replaces the GitHub updater with a scripted one (JSON script) and logs `quitAndInstall` calls to the file. |
+| `PANEON_APP_VERSION` | Tests: the version the app reports (the e2e runs report the package version). |
 | `PANEON_OPEN_LOG`, `PANEON_NOTIFY_LOG` | Tests: append open-in-editor and notification requests to a file instead of acting on them. |
 
 ## Project layout
@@ -222,7 +245,7 @@ scripts        icon generation
 
 - `node-pty` is the Microsoft package (1.1.0). Its Windows prebuilds are N-API, so they load in Electron without a compiler.
 - The xterm WebGL renderer is used when available; xterm 6 has no canvas addon, so the fallback is the DOM renderer.
-- Releases are built by GitHub Actions from a `v*` tag. Auto-update is not implemented yet.
+- Releases are built by GitHub Actions from a `v*` tag. The GitHub release body is the matching `CHANGELOG.md` section, and the same text is embedded in `latest.yml` so the in-app notes match.
 
 ## Contributing
 

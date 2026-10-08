@@ -280,3 +280,58 @@ test('generates the README screenshots from fake projects only', async () => {
     await closeApp(first.app)
   }
 })
+
+test('generates the update and what is new screenshots', async () => {
+  mkdirSync(OUT, { recursive: true })
+  const notes = [
+    '### Added',
+    '',
+    '- A dark mode toggle in the acme-web settings page.',
+    '- Faster project switching in billing-api.',
+    '',
+    '### Fixed',
+    '',
+    '- A pane no longer loses its title after a restart.'
+  ].join('\n')
+  const script = JSON.stringify({
+    check: 'available',
+    info: { version: '0.4.1', releaseDate: '2026-10-15T09:00:00.000Z', releaseNotes: notes }
+  })
+  const sandbox = createSandbox()
+  seed(sandbox, true)
+  const { app, page } = await launchApp(sandbox, {
+    ...demoEnv(),
+    PANEON_TEST_UPDATER: 'fake',
+    PANEON_TEST_UPDATER_SCRIPT: script,
+    PANEON_UPDATE_START_DELAY_MS: '200'
+  })
+  try {
+    await resize(app)
+    for (const project of PROJECTS.slice(0, 2)) {
+      await page.getByRole('button', { name: `New Claude session in ${project.name}`, exact: true }).click()
+    }
+    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('#update-pill')).toHaveText('Update 0.4.1')
+    await page.locator('#update-pill').click()
+    await expect(page.locator('.update-popover')).toBeVisible()
+    await settle(page, 1500)
+    await page.screenshot({ path: join(OUT, 'update.png') })
+  } finally {
+    await closeApp(app)
+  }
+
+  const seen = createSandbox()
+  seed(seen, true)
+  const stored = JSON.parse(readFileSync(join(seen.userData, 'settings.json'), 'utf8'))
+  writeFileSync(join(seen.userData, 'settings.json'), JSON.stringify({ ...stored, lastSeenVersion: '0.2.0' }), 'utf8')
+  const launched = await launchApp(seen, demoEnv())
+  try {
+    await resize(launched.app)
+    await expect(launched.page.locator('.whats-new')).toBeVisible()
+    await launched.page.locator('#wn-show-older').click()
+    await settle(launched.page, 800)
+    await launched.page.screenshot({ path: join(OUT, 'whats-new.png') })
+  } finally {
+    await closeApp(launched.app)
+  }
+})

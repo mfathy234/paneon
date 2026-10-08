@@ -24,6 +24,9 @@ import {
   toolCommand,
   type TaskPlan
 } from '../shared/agentTools'
+import { decideWhatsNew, entriesUpTo } from '../shared/changelog'
+import { showUpdatePill, type UpdateState } from '../shared/updates'
+import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
@@ -502,7 +505,68 @@ export function closeQuickPick(): void {
 }
 
 export function toggleThemePicker(open?: boolean): void {
-  store.set((s) => ({ ...s, themePickerOpen: open ?? !s.themePickerOpen, quickPickOpen: false }))
+  store.set((s) => ({ ...s, themePickerOpen: open ?? !s.themePickerOpen, quickPickOpen: false, updatePopoverOpen: false }))
+}
+
+export function toggleUpdatePopover(open?: boolean): void {
+  store.set((s) => ({ ...s, updatePopoverOpen: open ?? !s.updatePopoverOpen, themePickerOpen: false, quickPickOpen: false }))
+}
+
+export function setUpdateState(update: UpdateState): void {
+  store.set((s) => ({ ...s, update, updatePopoverOpen: s.updatePopoverOpen && update.mode !== 'dev' && showUpdatePill(update) }))
+}
+
+export async function runUpdateAction(action: 'check' | 'download' | 'retry' | 'dismiss' | 'restart'): Promise<void> {
+  if (action === 'dismiss') toggleUpdatePopover(false)
+  if (action === 'download' || action === 'retry') store.patch({ updatePopoverOpen: true })
+  const call = {
+    check: api.checkForUpdate,
+    download: api.downloadUpdate,
+    retry: api.retryUpdate,
+    dismiss: api.dismissUpdate,
+    restart: api.restartToUpdate
+  }[action]
+  await call()
+}
+
+export function openUpdateLink(url: string): void {
+  void api.openUpdateLink(url)
+}
+
+export function setAutoUpdateCheck(value: boolean): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, autoUpdateCheck: value } }))
+  void saveSettings({ autoUpdateCheck: value })
+}
+
+export function openWhatsNew(): void {
+  const version = store.state.info.version
+  store.set((s) => ({
+    ...s,
+    themePickerOpen: false,
+    updatePopoverOpen: false,
+    whatsNew: { version, from: null, entries: entriesUpTo(CHANGELOG_ENTRIES, version) }
+  }))
+}
+
+export function closeWhatsNew(): void {
+  const { whatsNew } = store.state
+  if (!whatsNew) return
+  store.patch({ whatsNew: null })
+  if (store.state.settings.lastSeenVersion !== whatsNew.version) {
+    store.set((s) => ({ ...s, settings: { ...s.settings, lastSeenVersion: whatsNew.version } }))
+    void saveSettings({ lastSeenVersion: whatsNew.version })
+  }
+}
+
+export function initWhatsNew(): void {
+  const { info, settings } = store.state
+  const decision = decideWhatsNew(info.version, settings.lastSeenVersion, CHANGELOG_ENTRIES)
+  if (decision.show) {
+    store.patch({ whatsNew: { version: info.version, from: decision.from, entries: decision.entries } })
+  } else if (decision.record) {
+    store.set((s) => ({ ...s, settings: { ...s.settings, lastSeenVersion: decision.record } }))
+    void saveSettings({ lastSeenVersion: decision.record })
+  }
 }
 
 export async function refreshBranches(): Promise<void> {

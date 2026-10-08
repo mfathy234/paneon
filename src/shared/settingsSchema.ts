@@ -1,5 +1,6 @@
 import { isAgent } from './agents'
 import { DEFAULT_THEME_ID } from './themes'
+import { isVersion } from './version'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -38,7 +39,9 @@ export const defaultSettings = (): Settings => ({
   sidebarCollapsed: false,
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
-  workspace: { panes: [], focusedIndex: 0 }
+  workspace: { panes: [], focusedIndex: 0 },
+  lastSeenVersion: null,
+  autoUpdateCheck: true
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -123,6 +126,8 @@ export function migrateSettings(raw: unknown): Settings {
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
     },
     onboardingDismissed: raw.onboardingDismissed === true,
-    workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id)))
+    workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
+    lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
+    autoUpdateCheck: raw.autoUpdateCheck !== false
   }
 }

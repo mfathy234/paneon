@@ -32,7 +32,7 @@ export class PtyManager {
 
   constructor(private readonly handlers: PtyHandlers) {}
 
-  info(userData: string): AppInfo {
+  info(userData: string): Omit<AppInfo, 'version'> {
     return { claudeCommand: claudeCommand(), codexCommand: codexCommand(), geminiCommand: geminiCommand(), shellCommand: shellCommand(), home: homedir(), userData }
   }
 

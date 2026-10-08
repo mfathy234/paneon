@@ -21,6 +21,7 @@ npmRebuild: false
 nodeGypRebuild: false
 buildDependenciesFromSource: false
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: x64
@@ -34,6 +35,9 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   include: build/installer.nsh
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
 portable:
   artifactName: Paneon-Portable-${version}.${ext}
 publish:

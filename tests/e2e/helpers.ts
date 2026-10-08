@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawn } from 'node:child_process'
@@ -17,6 +17,8 @@ export interface Sandbox {
   notifyLog: string
   pipe: string
 }
+
+export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version as string
 
 interface GridHook {
   bufferText(id: string): string
@@ -67,6 +69,7 @@ export async function launchApp(
     env: {
       ...env,
       PANEON_USER_DATA: sandbox.userData,
+      PANEON_APP_VERSION: APP_VERSION,
       PANEON_CLAUDE_COMMAND: 'cmd.exe',
       PANEON_CODEX_COMMAND: 'cmd.exe',
       PANEON_CODEX_HOME: sandbox.codexHome,
