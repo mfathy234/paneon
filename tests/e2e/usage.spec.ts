@@ -67,7 +67,7 @@ function seedHomes(sandbox: Sandbox): void {
         { at: now.getTime() - 3 * 3_600_000, w: { five_hour: 20, seven_day: 10 } },
         { at: now.getTime() - 3_600_000, w: { five_hour: 62, seven_day: 18 } }
       ],
-      costs: { 'sess-1': { at: now.getTime() - 60_000, usd: 4.25, cwd: sandbox.projectFolder } }
+      costs: { 'sess-1': { at: now.getTime() - 1000, usd: 4.25, cwd: sandbox.projectFolder } }
     }),
     'utf8'
   )

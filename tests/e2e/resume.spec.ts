@@ -9,6 +9,14 @@ const CLAUDE_NEW = '11111111-2222-4333-8444-555555555555'
 const CLAUDE_OLD = '11111111-2222-4333-8444-666666666666'
 const CODEX_ID = '019aaaaa-0000-7000-8000-0000000000aa'
 
+function minutesSinceMidnight(): number {
+  const now = new Date()
+  return now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+}
+
+const TODAY_NEWEST_MINUTES = (): number => Math.min(12, minutesSinceMidnight() / 3)
+const TODAY_OLDER_MINUTES = (): number => Math.min(60, (minutesSinceMidnight() * 2) / 3)
+
 function seed(sandbox: Sandbox): void {
   const dir = join(sandbox.claudeHome, 'projects', sandbox.projectFolder.replace(/[^A-Za-z0-9]/g, '-'))
   mkdirSync(dir, { recursive: true })
@@ -25,7 +33,7 @@ function seed(sandbox: Sandbox): void {
     const when = new Date(Date.now() - minutesAgo * 60_000)
     utimesSync(path, when, when)
   }
-  write(CLAUDE_NEW, 'Add dark mode toggle', 'Add a dark mode toggle to the settings page', 'The toggle now lives in Settings.', 12)
+  write(CLAUDE_NEW, 'Add dark mode toggle', 'Add a dark mode toggle to the settings page', 'The toggle now lives in Settings.', TODAY_NEWEST_MINUTES())
   write(CLAUDE_OLD, 'Investigate slow CI', 'Why is the pipeline slow?', 'The cache step is missing.', 60 * 24 * 4)
   const codexDir = join(sandbox.codexHome, 'sessions', '2026', '10', '08')
   mkdirSync(codexDir, { recursive: true })
@@ -38,7 +46,7 @@ function seed(sandbox: Sandbox): void {
     ].join('\n') + '\n'
   )
   writeFileSync(join(sandbox.codexHome, 'session_index.jsonl'), JSON.stringify({ id: CODEX_ID, thread_name: 'Fix flaky login test' }) + '\n')
-  const when = new Date(Date.now() - 60 * 60_000)
+  const when = new Date(Date.now() - TODAY_OLDER_MINUTES() * 60_000)
   utimesSync(rollout, when, when)
 }
 
