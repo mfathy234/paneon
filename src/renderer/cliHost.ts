@@ -10,6 +10,7 @@ import {
   startInFocusedPane,
   startSession
 } from './actions'
+import { openLayoutByName } from './layoutActions'
 import { store } from './state'
 
 async function addProject(folder: string, name?: string): Promise<ReturnType<typeof createProject> | string> {
@@ -38,6 +39,9 @@ export function runCliCommand(command: CliCommand): Promise<CliReply> {
     get projects() {
       return store.state.settings.projects
     },
+    get layouts() {
+      return store.state.settings.layouts
+    },
     now: Date.now(),
     openCount: (projectId) => store.state.panes.filter((p) => p.projectId === projectId).length,
     listSessions: (query) => api.listAllResumable(query),
@@ -45,6 +49,7 @@ export function runCliCommand(command: CliCommand): Promise<CliReply> {
     startSession: (projectId, agent, here) => (here ? startInFocusedPane(projectId, agent) : startSession(projectId, agent)),
     resumeSession: resumeInNewPane,
     openResumePicker,
+    openLayout: openLayoutByName,
     updateAgents
   }
   return runCli(command, host)

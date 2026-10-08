@@ -7,6 +7,7 @@ import {
   clampFontSize,
   type BackgroundImage,
   type Project,
+  type SavedLayout,
   type SavedPane,
   type SavedTab,
   type Settings,
@@ -43,6 +44,7 @@ export const defaultSettings = (): Settings => ({
   sessionInfo: { notifications: true, sound: false },
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
+  layouts: [],
   lastSeenVersion: null,
   autoUpdateCheck: true,
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT
@@ -95,23 +97,52 @@ function sanitizeTab(value: unknown): SavedTab | null {
   return tab
 }
 
+function sanitizePane(item: unknown): SavedPane | null {
+  if (!isRecord(item)) return null
+  const projectId = asString(item.projectId)
+  if (!projectId) return null
+  const tabs = (Array.isArray(item.tabs) ? item.tabs : [])
+    .map(sanitizeTab)
+    .filter((tab): tab is SavedTab => tab !== null)
+  if (tabs.length === 0) return null
+  const activeIndex = clampNumber(item.activeIndex, 0, tabs.length - 1, 0)
+  const fontSize = clampFontSize(typeof item.fontSize === 'number' ? item.fontSize : DEFAULT_FONT_SIZE)
+  return { projectId, tabs, activeIndex: Math.round(activeIndex), fontSize }
+}
+
+function sanitizePanes(value: unknown): SavedPane[] {
+  return (Array.isArray(value) ? value : []).map(sanitizePane).filter((pane): pane is SavedPane => pane !== null)
+}
+
+function focusedIn(value: unknown, count: number): number {
+  return Math.round(clampNumber(value, 0, Math.max(0, count - 1), 0))
+}
+
 function sanitizeWorkspace(value: unknown, projectIds: Set<string>): Workspace {
   if (!isRecord(value) || !Array.isArray(value.panes)) return { panes: [], focusedIndex: 0 }
-  const panes: SavedPane[] = []
-  for (const item of value.panes) {
+  const panes = sanitizePanes(value.panes).filter((pane) => projectIds.has(pane.projectId))
+  return { panes, focusedIndex: focusedIn(value.focusedIndex, panes.length) }
+}
+
+export const MAX_LAYOUTS = 50
+export const LAYOUT_NAME_MAX = 40
+
+function sanitizeLayouts(value: unknown): SavedLayout[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const layouts: SavedLayout[] = []
+  for (const item of value) {
     if (!isRecord(item)) continue
-    const projectId = asString(item.projectId)
-    if (!projectId || !projectIds.has(projectId)) continue
-    const tabs = (Array.isArray(item.tabs) ? item.tabs : [])
-      .map(sanitizeTab)
-      .filter((tab): tab is SavedTab => tab !== null)
-    if (tabs.length === 0) continue
-    const activeIndex = clampNumber(item.activeIndex, 0, tabs.length - 1, 0)
-    const fontSize = clampFontSize(typeof item.fontSize === 'number' ? item.fontSize : DEFAULT_FONT_SIZE)
-    panes.push({ projectId, tabs, activeIndex: Math.round(activeIndex), fontSize })
+    const name = asString(item.name)?.trim().slice(0, LAYOUT_NAME_MAX)
+    const panes = sanitizePanes(item.panes)
+    if (!name || panes.length === 0) continue
+    let id = asString(item.id) ?? makeId()
+    if (seen.has(id)) id = makeId()
+    seen.add(id)
+    const createdAt = typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) ? item.createdAt : 0
+    layouts.push({ id, name, createdAt, focusedIndex: focusedIn(item.focusedIndex, panes.length), panes })
   }
-  const focusedIndex = Math.round(clampNumber(value.focusedIndex, 0, Math.max(0, panes.length - 1), 0))
-  return { panes, focusedIndex }
+  return layouts.slice(0, MAX_LAYOUTS)
 }
 
 function sanitizeShortcut(value: unknown): string {
@@ -136,6 +167,7 @@ export function migrateSettings(raw: unknown): Settings {
     },
     onboardingDismissed: raw.onboardingDismissed === true,
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
+    layouts: sanitizeLayouts(raw.layouts),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut)

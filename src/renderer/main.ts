@@ -25,6 +25,7 @@ import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
+import { installLayoutCommands } from './commands/layouts'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
@@ -85,6 +86,7 @@ async function boot(): Promise<void> {
   installAttention()
   void installOps()
   installBuiltinCommands()
+  installLayoutCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)
   initWhatsNew()

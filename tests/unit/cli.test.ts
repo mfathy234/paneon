@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { HELP_TEXT, cliWords, findProject, parseCli, runCli, table, type CliCommand, type CliHost } from '../../src/shared/cli'
-import type { Project, ResumeSession } from '../../src/shared/types'
+import type { Project, ResumeSession, SavedLayout } from '../../src/shared/types'
 
 const CWD = 'C:\\work\\acme-web'
 const resolvePath = (path: string): string => (/^[A-Za-z]:/.test(path) ? path : `C:\\work\\${path}`)
@@ -10,6 +10,27 @@ const PROJECTS: Project[] = [
   { id: 'a', name: 'acme-web', folder: 'C:\\work\\acme-web', defaultAgent: 'claude' },
   { id: 'b', name: 'billing-api', folder: 'C:\\work\\billing-api', defaultAgent: 'codex' },
   { id: 'd', name: 'docs-site', folder: 'C:\\work\\docs-site', defaultAgent: 'claude' }
+]
+
+const LAYOUTS: SavedLayout[] = [
+  {
+    id: 'l1',
+    name: 'Morning',
+    createdAt: 1,
+    focusedIndex: 0,
+    panes: [
+      { projectId: 'a', activeIndex: 0, fontSize: 15, tabs: [{ agent: 'claude', label: 'claude' }] },
+      { projectId: 'b', activeIndex: 0, fontSize: 15, tabs: [{ agent: 'codex', label: 'codex' }] },
+      { projectId: 'a', activeIndex: 0, fontSize: 15, tabs: [{ agent: 'shell', label: 'shell' }] }
+    ]
+  },
+  {
+    id: 'l2',
+    name: 'Docs day',
+    createdAt: 2,
+    focusedIndex: 0,
+    panes: [{ projectId: 'gone', activeIndex: 0, fontSize: 15, tabs: [{ agent: 'gemini', label: 'gemini' }] }]
+  }
 ]
 
 const session = (over: Partial<ResumeSession> = {}): ResumeSession => ({
@@ -27,6 +48,7 @@ function host(over: Partial<CliHost> = {}): CliHost {
   return {
     version: '0.3.0',
     projects: PROJECTS,
+    layouts: LAYOUTS,
     now: 1_000_000,
     openCount: (id) => (id === 'a' ? 2 : 0),
     listSessions: vi.fn(async () => [session()]),
@@ -39,6 +61,7 @@ function host(over: Partial<CliHost> = {}): CliHost {
     startSession: vi.fn(async () => 3),
     resumeSession: vi.fn(async () => ({ pane: 4, alreadyOpen: false })),
     openResumePicker: vi.fn(),
+    openLayout: vi.fn(async (name: string) => ({ ok: true, text: `Opened layout '${name}' (3 panes)` })),
     updateAgents: vi.fn(async () => 'Updating the agents in a shell tab.'),
     ...over
   }
@@ -98,6 +121,21 @@ describe('parseCli', () => {
     expect(parse('update-agents')).toEqual({ ok: true, command: { kind: 'update-agents' } })
   })
 
+  it('parses open with a layout name, joining several words and reading the mode', () => {
+    expect(parse('open', 'morning')).toEqual({ ok: true, command: { kind: 'open-layout', name: 'morning', mode: undefined } })
+    expect(parse('open', 'docs', 'day', '--replace')).toEqual({
+      ok: true,
+      command: { kind: 'open-layout', name: 'docs day', mode: 'replace' }
+    })
+    expect(parse('open', 'morning', '--alongside')).toMatchObject({ command: { mode: 'add' } })
+    expect(parse('open', 'morning', '--replace', '--alongside')).toEqual({
+      ok: false,
+      error: 'Use --replace or --alongside, not both.'
+    })
+    expect(parse('open', '--bogus')).toEqual({ ok: false, error: "Unknown option '--bogus'." })
+    expect(parse('layouts')).toEqual({ ok: true, command: { kind: 'layouts' } })
+  })
+
   it('rejects unknown commands, options, agents and missing values', () => {
     expect(parse('launch')).toEqual({ ok: false, error: "Unknown command 'launch'. Run paneon --help." })
     expect(parse('ls', '--wide')).toEqual({ ok: false, error: "Unknown option '--wide'." })
@@ -116,6 +154,8 @@ describe('cliWords', () => {
   it('only accepts a known first word so Chromium switches never run as commands', () => {
     expect(cliWords(['ls'])).toEqual(['ls'])
     expect(cliWords(['.'])).toEqual(['.'])
+    expect(cliWords(['layouts'])).toEqual(['layouts'])
+    expect(cliWords(['open', 'morning', '--replace'])).toEqual(['open', 'morning', '--replace'])
     expect(cliWords(['--version'])).toEqual(['--version'])
     expect(cliWords(['--no-sandbox'])).toBeNull()
     expect(cliWords(['--allow-file-access-from-files', 'ls', '--wide'])).toEqual(['ls', '--wide'])
@@ -219,6 +259,29 @@ describe('runCli', () => {
     const reply = await run({ kind: 'sessions', project: 'acme-web' })
     expect(reply.out).toBe('AGENT   TITLE                 LAST ACTIVE  ID\nclaude  Add dark mode toggle  12m ago      7c1e04')
     expect((await run({ kind: 'sessions', project: 'nope' })).ok).toBe(false)
+  })
+
+  it('lists saved layouts with their pane counts and projects', async () => {
+    const reply = await run({ kind: 'layouts' })
+    expect(reply.out).toBe(
+      ['NAME      PANES    PROJECTS', 'Morning   3 panes  acme-web, billing-api', 'Docs day  1 pane   removed project'].join('\n')
+    )
+    expect((await run({ kind: 'layouts' }, host({ layouts: [] }))).out).toBe(
+      'No saved layouts. Use Layouts in the top bar to save one.'
+    )
+  })
+
+  it('opens a layout through the host and reports failures with a non-zero exit', async () => {
+    const h = host()
+    const reply = await run({ kind: 'open-layout', name: 'morning', mode: 'add' }, h)
+    expect(h.openLayout).toHaveBeenCalledWith('morning', 'add')
+    expect(reply).toEqual({ ok: true, exit: 0, out: "Opened layout 'morning' (3 panes)" })
+    const missing = host({ openLayout: vi.fn(async () => ({ ok: false, text: "No layout named 'x'. Run paneon layouts." })) })
+    expect(await run({ kind: 'open-layout', name: 'x' }, missing)).toEqual({
+      ok: false,
+      exit: 1,
+      out: "No layout named 'x'. Run paneon layouts."
+    })
   })
 
   it('delegates update-agents to the host', async () => {

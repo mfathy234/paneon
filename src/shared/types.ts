@@ -41,6 +41,14 @@ export interface Workspace {
   focusedIndex: number
 }
 
+export interface SavedLayout {
+  id: string
+  name: string
+  createdAt: number
+  focusedIndex: number
+  panes: SavedPane[]
+}
+
 export interface SessionInfoSettings {
   notifications: boolean
   sound: boolean
@@ -54,6 +62,7 @@ export interface Settings {
   sessionInfo: SessionInfoSettings
   onboardingDismissed: boolean
   workspace: Workspace
+  layouts: SavedLayout[]
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
   paletteShortcut: string

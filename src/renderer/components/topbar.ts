@@ -1,4 +1,12 @@
-import { openQuickPick, openResumePicker, toggleThemePicker, toggleUpdatePopover, zoomAll, showView } from '../actions'
+import {
+  openQuickPick,
+  openResumePicker,
+  showView,
+  toggleLayouts,
+  toggleThemePicker,
+  toggleUpdatePopover,
+  zoomAll
+} from '../actions'
 import { pillLabel, showUpdatePill } from '../../shared/updates'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
@@ -49,6 +57,11 @@ export class TopBarComponent {
   private readonly projects = h('button', { class: 'btn ghost', type: 'button', id: 'projects-button' }, 'Projects')
   private readonly agentsDot = h('span', { class: 'update-dot', hidden: true, title: 'Agent updates available' })
   private readonly agents = h('button', { class: 'btn ghost', type: 'button', id: 'agents-button' }, 'Agents', this.agentsDot)
+  readonly layoutsButton = h(
+    'button',
+    { class: 'btn ghost', type: 'button', id: 'layouts-button', 'aria-haspopup': 'dialog', onClick: () => toggleLayouts() },
+    'Layouts'
+  )
   private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
   readonly updatePill = h('button', {
     class: 'update-pill',
@@ -78,6 +91,7 @@ export class TopBarComponent {
       h('div', { class: 'split' }, this.newSession, h('span', { class: 'split-sep' }), this.chevron),
       this.projects,
       this.agents,
+      this.layoutsButton,
       this.count,
       this.updatePill,
       h('span', { class: 'spacer' }),
@@ -98,6 +112,7 @@ export class TopBarComponent {
     this.agents.setAttribute('aria-label', updates ? 'Agents, updates available' : 'Agents')
     this.updatePillState(state)
     this.themeButton.setAttribute('aria-expanded', String(state.themePickerOpen))
+    this.layoutsButton.setAttribute('aria-expanded', String(state.layoutsOpen))
     this.count.replaceChildren(
       `${sessions} session${sessions === 1 ? '' : 's'}`,
       ' · ',

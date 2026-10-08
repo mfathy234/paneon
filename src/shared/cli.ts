@@ -1,10 +1,15 @@
 import { AGENT_NAMES, isAgent } from './agents'
 import { formatAge } from './statusLine'
 import { normalizePath } from './sessionMatch'
-import type { AgentKind, Project, ResumeQuery, ResumeSession } from './types'
+import { layoutProjectNames, paneCountText } from './layouts'
+import type { AgentKind, Project, ResumeQuery, ResumeSession, SavedLayout } from './types'
+
+export type LayoutMode = 'replace' | 'add'
 
 export type CliCommand =
   | { kind: 'open' }
+  | { kind: 'open-layout'; name: string; mode?: LayoutMode }
+  | { kind: 'layouts' }
   | { kind: 'start'; target: string | null; path: string | null; agent?: AgentKind; here: boolean }
   | { kind: 'resume'; project: string | null; path: string | null; last: boolean; agent?: AgentKind }
   | { kind: 'ls' }
@@ -27,12 +32,14 @@ export interface CliReply {
   out: string
 }
 
-export const COMMAND_NAMES = ['open', 'start', 'resume', 'ls', 'sessions', 'add', 'update-agents', 'help'] as const
+export const COMMAND_NAMES = ['open', 'start', 'resume', 'ls', 'layouts', 'sessions', 'add', 'update-agents', 'help'] as const
 
 export const HELP_TEXT = [
   'Usage: paneon [command]',
   '',
   '  open                                   Open Paneon (default)',
+  '  open <layout> [--replace|--alongside]  Open a saved layout',
+  '  layouts                                List saved layouts',
   '  . | start <project|path>               Start a session in a project',
   '      [--agent claude|codex|gemini] [--here]',
   '  resume [project] [--last] [--agent]    Resume an earlier session',
@@ -50,17 +57,21 @@ interface Flags {
   agent?: AgentKind
   here: boolean
   last: boolean
+  replace: boolean
+  alongside: boolean
   name?: string
   error?: string
 }
 
 function readFlags(args: string[]): Flags {
-  const flags: Flags = { positional: [], here: false, last: false }
+  const flags: Flags = { positional: [], here: false, last: false, replace: false, alongside: false }
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]
     const [key, inline] = arg.startsWith('--') ? arg.split(/=(.*)/s, 2) : [arg, undefined]
     if (key === '--here') flags.here = true
     else if (key === '--last') flags.last = true
+    else if (key === '--replace') flags.replace = true
+    else if (key === '--alongside') flags.alongside = true
     else if (key === '--agent' || key === '--name') {
       const value = inline ?? args[(i += 1)]
       if (value === undefined || value.startsWith('--')) flags.error = `${key} needs a value.`
@@ -73,9 +84,19 @@ function readFlags(args: string[]): Flags {
   return flags
 }
 
+function parseOpen(rest: string[]): CliParse {
+  const flags = readFlags(rest)
+  if (flags.error) return { ok: false, error: flags.error }
+  if (flags.positional.length === 0) return { ok: true, command: { kind: 'open' } }
+  if (flags.replace && flags.alongside) return { ok: false, error: 'Use --replace or --alongside, not both.' }
+  const mode: LayoutMode | undefined = flags.replace ? 'replace' : flags.alongside ? 'add' : undefined
+  return { ok: true, command: { kind: 'open-layout', name: flags.positional.join(' '), mode } }
+}
+
 export function parseCli(args: string[], cwd: string, resolvePath: (path: string) => string): CliParse {
   const [first, ...rest] = args
-  if (first === undefined || first === 'open') return { ok: true, command: { kind: 'open' } }
+  if (first === undefined) return { ok: true, command: { kind: 'open' } }
+  if (first === 'open') return parseOpen(rest)
   if (first === '--help' || first === '-h' || first === 'help') return { ok: true, command: { kind: 'help' } }
   if (first === '--version' || first === '-v') return { ok: true, command: { kind: 'version' } }
   const flags = readFlags(rest)
@@ -108,6 +129,8 @@ export function parseCli(args: string[], cwd: string, resolvePath: (path: string
       }
     case 'ls':
       return { ok: true, command: { kind: 'ls' } }
+    case 'layouts':
+      return { ok: true, command: { kind: 'layouts' } }
     case 'sessions':
       return { ok: true, command: { kind: 'sessions', project: target ?? null } }
     case 'add':
@@ -133,6 +156,7 @@ export function table(headers: string[], rows: string[][]): string {
 export interface CliHost {
   version: string
   projects: Project[]
+  layouts: SavedLayout[]
   now: number
   openCount(projectId: string): number
   listSessions(query: ResumeQuery): Promise<ResumeSession[]>
@@ -140,6 +164,7 @@ export interface CliHost {
   startSession(projectId: string, agent: AgentKind | undefined, here: boolean): Promise<number>
   resumeSession(session: ResumeSession): Promise<{ pane: number; alreadyOpen: boolean }>
   openResumePicker(projectId?: string): void
+  openLayout(name: string, mode?: LayoutMode): Promise<{ ok: boolean; text: string }>
   updateAgents(): Promise<string>
 }
 
@@ -210,6 +235,16 @@ async function runSessions(command: Extract<CliCommand, { kind: 'sessions' }>, h
   return success(table(['AGENT', 'TITLE', 'LAST ACTIVE', 'ID'], rows))
 }
 
+function runLayouts(host: CliHost): CliReply {
+  if (host.layouts.length === 0) return success('No saved layouts. Use Layouts in the top bar to save one.')
+  const rows = host.layouts.map((layout) => [
+    layout.name,
+    paneCountText(layout.panes.length),
+    layoutProjectNames(layout, host.projects).join(', ')
+  ])
+  return success(table(['NAME', 'PANES', 'PROJECTS'], rows))
+}
+
 export async function runCli(command: CliCommand, host: CliHost): Promise<CliReply> {
   switch (command.kind) {
     case 'open':
@@ -226,6 +261,12 @@ export async function runCli(command: CliCommand, host: CliHost): Promise<CliRep
           host.projects.map((p) => [p.name, p.defaultAgent, p.folder, String(host.openCount(p.id))])
         )
       )
+    case 'layouts':
+      return runLayouts(host)
+    case 'open-layout': {
+      const result = await host.openLayout(command.name, command.mode)
+      return result.ok ? success(result.text) : failure(result.text)
+    }
     case 'sessions':
       return runSessions(command, host)
     case 'add': {

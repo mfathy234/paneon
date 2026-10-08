@@ -8,6 +8,7 @@ import {
   type Project,
   type QuickOpenKind,
   type ResumeSession,
+  type SavedPane,
   type SessionInfoSettings,
   type StatusInfo,
   type Settings,
@@ -26,6 +27,7 @@ import {
 } from '../shared/agentTools'
 import { decideWhatsNew, effectiveLastSeen, entriesUpTo } from '../shared/changelog'
 import { showUpdatePill, type UpdateState } from '../shared/updates'
+import { snapshotWorkspace } from '../shared/layouts'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
 import type { OpsSnapshot } from '../shared/opsFeed'
@@ -75,7 +77,7 @@ function uniqueLabel(tabs: TermState[], base: string): string {
   return candidate
 }
 
-function makeTerm(agent: TabAgent, existing: TermState[], sessionId?: string, label?: string): TermState {
+export function makeTerm(agent: TabAgent, existing: TermState[], sessionId?: string, label?: string): TermState {
   return {
     id: newId(),
     agent,
@@ -86,7 +88,7 @@ function makeTerm(agent: TabAgent, existing: TermState[], sessionId?: string, la
   }
 }
 
-function saveSettings(patch: Partial<Settings>): Promise<void> {
+export function saveSettings(patch: Partial<Settings>): Promise<void> {
   return api.updateSettings(patch).then(
     () => undefined,
     (error: unknown) => toast((error as Error).message || 'Could not save settings.')
@@ -94,27 +96,7 @@ function saveSettings(patch: Partial<Settings>): Promise<void> {
 }
 
 function saveWorkspace(): Promise<void> {
-  const { focusedId } = store.state
-  const panes = store.state.panes
-    .map((pane) => ({ ...pane, tabs: pane.tabs.filter((t) => t.task === undefined) }))
-    .filter((pane) => pane.tabs.length > 0)
-  const focusedIndex = Math.max(0, panes.findIndex((p) => p.id === focusedId))
-  return saveSettings({
-    workspace: {
-      focusedIndex,
-      panes: panes.map((pane) => ({
-        projectId: pane.projectId,
-        fontSize: pane.fontSize,
-        activeIndex: Math.max(0, pane.tabs.findIndex((t) => t.id === pane.activeTabId)),
-        tabs: pane.tabs.map((t) => ({
-          agent: t.agent,
-          label: t.label,
-          sessionId: t.sessionId,
-          agentsOpen: t.agentsOpen === true ? true : undefined
-        }))
-      }))
-    }
-  })
+  return saveSettings({ workspace: snapshotWorkspace(store.state.panes, store.state.focusedId) })
 }
 
 export function persistWorkspace(): void {
@@ -133,7 +115,7 @@ export async function flushWorkspace(): Promise<void> {
   await saveWorkspace()
 }
 
-async function launch(paneId: string, termId: string, resume: boolean): Promise<void> {
+export async function launch(paneId: string, termId: string, resume: boolean): Promise<void> {
   await nextFrame()
   await nextFrame()
   const state = store.state
@@ -274,7 +256,7 @@ export async function restartTab(paneId: string, termId: string): Promise<void> 
   await launch(paneId, termId, canResume(tab))
 }
 
-function canResume(tab: TermState): boolean {
+export function canResume(tab: TermState): boolean {
   return tab.agent === 'claude' || ((tab.agent === 'codex' || tab.agent === 'gemini') && Boolean(tab.sessionId))
 }
 
@@ -343,7 +325,7 @@ export async function closePane(paneId: string): Promise<void> {
   await discardPane(paneId)
 }
 
-async function discardPane(paneId: string): Promise<void> {
+export async function discardPane(paneId: string): Promise<void> {
   const pane = paneById(store.state, paneId)
   if (!pane) return
   await Promise.all(pane.tabs.map((t) => stopTerminal(t.id)))
@@ -475,7 +457,13 @@ export function showView(view: AppState['view']): void {
 }
 
 export function openQuickPick(preset: AgentPreset = 'default'): void {
-  store.patch({ quickPickOpen: true, quickPickPreset: preset, quickPickMode: 'new', themePickerOpen: false })
+  store.patch({
+    quickPickOpen: true,
+    quickPickPreset: preset,
+    quickPickMode: 'new',
+    themePickerOpen: false,
+    layoutsOpen: false
+  })
 }
 
 export function openResumePicker(projectId?: string): void {
@@ -483,7 +471,8 @@ export function openResumePicker(projectId?: string): void {
     quickPickOpen: true,
     quickPickMode: 'resume',
     resumeProjectId: projectId ?? null,
-    themePickerOpen: false
+    themePickerOpen: false,
+    layoutsOpen: false
   })
 }
 
@@ -491,8 +480,24 @@ export function setQuickPickMode(mode: AppState['quickPickMode']): void {
   store.patch({ quickPickMode: mode })
 }
 
+export function toggleLayouts(open?: boolean): void {
+  store.set((s) => ({
+    ...s,
+    layoutsOpen: open ?? !s.layoutsOpen,
+    quickPickOpen: false,
+    themePickerOpen: false,
+    updatePopoverOpen: false
+  }))
+}
+
 export function openPalette(): void {
-  store.patch({ paletteOpen: true, quickPickOpen: false, themePickerOpen: false, updatePopoverOpen: false })
+  store.patch({
+    paletteOpen: true,
+    quickPickOpen: false,
+    themePickerOpen: false,
+    updatePopoverOpen: false,
+    layoutsOpen: false
+  })
 }
 
 export function closePalette(): void {
@@ -513,11 +518,23 @@ export function closeQuickPick(): void {
 }
 
 export function toggleThemePicker(open?: boolean): void {
-  store.set((s) => ({ ...s, themePickerOpen: open ?? !s.themePickerOpen, quickPickOpen: false, updatePopoverOpen: false }))
+  store.set((s) => ({
+    ...s,
+    themePickerOpen: open ?? !s.themePickerOpen,
+    quickPickOpen: false,
+    updatePopoverOpen: false,
+    layoutsOpen: false
+  }))
 }
 
 export function toggleUpdatePopover(open?: boolean): void {
-  store.set((s) => ({ ...s, updatePopoverOpen: open ?? !s.updatePopoverOpen, themePickerOpen: false, quickPickOpen: false }))
+  store.set((s) => ({
+    ...s,
+    updatePopoverOpen: open ?? !s.updatePopoverOpen,
+    themePickerOpen: false,
+    quickPickOpen: false,
+    layoutsOpen: false
+  }))
 }
 
 export function setUpdateState(update: UpdateState): void {
@@ -647,23 +664,26 @@ export async function removeProject(projectId: string): Promise<void> {
   saveProjects()
 }
 
+export function buildPane(saved: SavedPane, project: Project): PaneState {
+  const tabs: TermState[] = []
+  for (const tab of saved.tabs) {
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, agentsOpen: tab.agentsOpen })
+  }
+  return {
+    id: newId(),
+    projectId: project.id,
+    tabs,
+    activeTabId: tabs[Math.min(saved.activeIndex, tabs.length - 1)].id,
+    fontSize: clampFontSize(saved.fontSize)
+  }
+}
+
 export async function restoreWorkspace(): Promise<void> {
   const { settings } = store.state
   const restored: PaneState[] = []
   for (const saved of settings.workspace.panes) {
     const project = projectById(store.state, saved.projectId)
-    if (!project) continue
-    const tabs: TermState[] = []
-    for (const tab of saved.tabs) {
-      tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, agentsOpen: tab.agentsOpen })
-    }
-    restored.push({
-      id: newId(),
-      projectId: project.id,
-      tabs,
-      activeTabId: tabs[Math.min(saved.activeIndex, tabs.length - 1)].id,
-      fontSize: clampFontSize(saved.fontSize)
-    })
+    if (project) restored.push(buildPane(saved, project))
   }
   if (restored.length === 0) return
   const focused = restored[Math.min(settings.workspace.focusedIndex, restored.length - 1)]

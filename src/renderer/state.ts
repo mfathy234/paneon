@@ -96,6 +96,7 @@ export interface AppState {
   resumeProjectId: string | null
   onboardingOpen: boolean
   paletteOpen: boolean
+  layoutsOpen: boolean
   themePickerOpen: boolean
   update: UpdateState
   updatePopoverOpen: boolean
@@ -132,6 +133,7 @@ export const initialState = (): AppState => ({
   resumeProjectId: null,
   onboardingOpen: false,
   paletteOpen: false,
+  layoutsOpen: false,
   themePickerOpen: false,
   update: initialUpdateState(),
   updatePopoverOpen: false,
