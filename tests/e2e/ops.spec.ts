@@ -176,6 +176,6 @@ test('details panel without a snapshot explains what the ops mod adds', async ()
     await expect(details).toContainText('The ops mod adds plan, agents, files and checks to this panel.')
     await expect(page.locator('.agents-toggle')).toHaveCount(0)
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })

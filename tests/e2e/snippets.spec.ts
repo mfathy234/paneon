@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { APP_VERSION, activeTermId, bufferText, closeApp, createSandbox, feedTerminal, launchApp, selectAllText } from './helpers'
 
 const SLOW = 30_000
+const flat = async (page: Page, id: string): Promise<string> => (await bufferText(page, id)).replace(/[\r\n]/g, '')
 const SCREENS = 'test-results/screens'
 const ECHO = resolve(__dirname, '../support/echoInput.cjs')
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -23,8 +24,8 @@ function seedSnippets(userData: string): void {
 
 async function selectOnly(page: Page, id: string, text: string): Promise<void> {
   await feedTerminal(page, id, `\x1b[2J\x1b[H${text}`)
-  await expect.poll(() => bufferText(page, id), { timeout: SLOW }).not.toContain('GOT')
-  await expect.poll(() => bufferText(page, id), { timeout: SLOW }).toContain(text)
+  await expect.poll(() => flat(page, id), { timeout: SLOW }).not.toContain('GOT')
+  await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain(text)
   await selectAllText(page, id)
 }
 
@@ -103,17 +104,17 @@ test('inserting a snippet types it into the focused terminal without sending it 
   try {
     await page.getByRole('button', { name: 'New Claude session in Smoke', exact: true }).click()
     const id = await activeTermId(page)
-    await expect.poll(() => bufferText(page, id), { timeout: 20_000 }).toContain('echo-input ready')
+    await expect.poll(() => flat(page, id), { timeout: 20_000 }).toContain('echo-input ready')
     await expect(page.locator('.pane .chip-text')).toHaveText('feature/dark-mode')
     await page.locator('.term-host.active').click()
     await expect(page.locator('.term-host.active .xterm-helper-textarea')).toBeFocused()
 
     await page.keyboard.press('Alt+1')
     await expect(page.locator('.toast').last()).toContainText("Inserted 'Review the diff'. Press Enter to send it.")
-    await expect.poll(() => bufferText(page, id), { timeout: SLOW }).toContain('GOT "Review the staged changes and list risks."')
+    await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain('GOT "Review the staged changes and list risks."')
 
     await page.keyboard.press('Alt+2')
-    await expect.poll(() => bufferText(page, id), { timeout: SLOW }).toContain(
+    await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain(
       `GOT "Describe feature/dark-mode of Smoke in ${sandbox.projectFolder.replace(/\\/g, '\\\\')}"`
     )
 
@@ -123,14 +124,14 @@ test('inserting a snippet types it into the focused terminal without sending it 
 
     await selectOnly(page, id, 'TypeError: boom')
     await page.keyboard.press('Alt+3')
-    await expect.poll(() => bufferText(page, id), { timeout: SLOW }).toContain('GOT "Explain this error and suggest a fix: TypeError: boom"')
+    await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain('GOT "Explain this error and suggest a fix: TypeError: boom"')
     await expect(page.locator('.toast').last()).toContainText('line breaks were joined')
 
     await feedTerminal(page, id, '\x1b[?2004h')
     await selectOnly(page, id, 'TypeError: boom')
     await page.keyboard.press('Alt+3')
     await expect
-      .poll(() => bufferText(page, id), { timeout: SLOW })
+      .poll(() => flat(page, id), { timeout: SLOW })
       .toContain('GOT "\\u001b[200~Explain this error and suggest a fix:\\rTypeError: boom\\u001b[201~"')
 
     await page.keyboard.press('Control+k')
@@ -143,7 +144,7 @@ test('inserting a snippet types it into the focused terminal without sending it 
     await expect(page.locator('.palette-row .palette-kbd')).toHaveText('Alt+1')
     await page.screenshot({ path: join(SCREENS, '37-palette-snippets.png') })
     await page.keyboard.press('Enter')
-    await expect.poll(() => bufferText(page, id), { timeout: SLOW }).toContain('GOT "Review the staged changes and list risks."')
+    await expect.poll(() => flat(page, id), { timeout: SLOW }).toContain('GOT "Review the staged changes and list risks."')
     expect(await bufferText(page, id)).not.toContain('is not recognized')
   } finally {
     expect(await closeApp(app)).toBeLessThan(10_000)

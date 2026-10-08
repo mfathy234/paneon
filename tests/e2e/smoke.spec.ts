@@ -85,7 +85,7 @@ test('starts a session from the sidebar without any prompt and drives the grid',
     await expect.poll(() => (readSettings(sandbox.userData).workspace?.panes?.length ?? -1)).toBe(0)
     expect(readSettings(sandbox.userData).theme.id).toBe('grid-dark')
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })
 
@@ -140,7 +140,7 @@ test('projects view validates folders and confirms removal by name', async () =>
     await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Missing' }).click()
     await expect(page.locator('[data-project-id="gone"]')).toHaveCount(0)
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })
 
@@ -178,7 +178,7 @@ test('names panes from Claude session files and lays three panes out with a wide
     await expect(page.locator('.topbar-count')).toContainText('1 busy')
     await page.screenshot({ path: join(SCREENS, '9-three-panes-named.png') })
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })
 
@@ -218,7 +218,7 @@ test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex 
     await page.keyboard.press('Escape')
     await expect(page.locator('.quickpick')).toHaveCount(0)
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })
 
@@ -262,7 +262,7 @@ test('cycles Claude, Codex, Gemini with Tab, marks Gemini with G and stores a se
     await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
     await page.keyboard.press('Escape')
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })
 
@@ -337,6 +337,6 @@ test('names and status of a Codex pane come from Codex rollout files', async () 
     await expect(page.locator('.topbar-count')).toContainText('1 busy')
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.sessionId).toBe(id)
   } finally {
-    await app.close()
+    await closeApp(app)
   }
 })
