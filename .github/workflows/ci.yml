@@ -14,6 +14,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
+      - name: Keep temp files under the runner temp folder
+        shell: bash
+        run: |
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
@@ -33,6 +38,6 @@ jobs:
           path: |
             test-results/
             playwright-report/
-            ${{ replace(env.TEMP, '\', '/') }}/paneon-e2e-*/quit.log
+            ${{ runner.temp }}/paneon-e2e-*/quit.log
           if-no-files-found: ignore
           retention-days: 7
