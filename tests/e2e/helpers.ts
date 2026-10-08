@@ -21,6 +21,7 @@ export interface Sandbox {
 interface GridHook {
   bufferText(id: string): string
   fontSize(id: string): number
+  feed(id: string, data: string): void
 }
 
 export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
@@ -94,6 +95,9 @@ export async function activeTermId(page: Page): Promise<string> {
 
 export const bufferText = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.bufferText(termId), id)
+
+export const feedTerminal = (page: Page, id: string, data: string): Promise<void> =>
+  page.evaluate(([termId, text]) => (window as unknown as { __grid: GridHook }).__grid.feed(termId, text), [id, data])
 
 export const fontSize = (page: Page, id: string): Promise<number> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.fontSize(termId), id)

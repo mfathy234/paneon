@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { activeTermId, bufferText, closeApp, createSandbox, feedTerminal, launchApp, QUIT_BUDGET_MS, type Sandbox } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -156,12 +156,9 @@ test('needs-you: done after busy to idle, permission prompt, notification only w
     await expect(first).toHaveAttribute('data-attention', 'none')
     await expect(first.locator('.attention-word')).toBeHidden()
 
-    await first.locator('.term-host.active').click()
     const firstId = await first.locator('.term-host.active').getAttribute('data-term-id')
-    await page.keyboard.type('echo Do you want to proceed?\n')
-    await page.keyboard.type('echo 1. Yes\n')
-    await page.keyboard.type('echo 3. No, and tell Claude what to do differently\n')
-    await expect.poll(() => bufferText(page, firstId!), { timeout: 15_000 }).toContain('3. No, and tell')
+    await feedTerminal(page, firstId!, ['Do you want to proceed?', '1. Yes', '3. No, and tell Claude what to do differently', ''].join('\r\n'))
+    await expect.poll(() => bufferText(page, firstId!), { timeout: 15_000 }).toContain('1. Yes')
     await second.locator('.pane-title').click()
     await expect(first).toHaveAttribute('data-attention', 'needs', { timeout: 15_000 })
     await expect(first.locator('.attention-word')).toHaveText('needs you')
@@ -169,7 +166,8 @@ test('needs-you: done after busy to idle, permission prompt, notification only w
     await first.locator('.pane-title').click()
     await expect(first).toHaveAttribute('data-attention', 'none')
 
-    await page.keyboard.type('cls\n')
+    await feedTerminal(page, firstId!, String.fromCharCode(27) + '[2J' + String.fromCharCode(27) + '[H')
+    await expect.poll(() => bufferText(page, firstId!), { timeout: 15_000 }).not.toContain('1. Yes')
     await second.locator('.pane-title').click()
     await expect(first).toHaveAttribute('data-attention', 'none')
     const before = readLines(sandbox.notifyLog).length
@@ -184,7 +182,7 @@ test('needs-you: done after busy to idle, permission prompt, notification only w
     expect(note.title).toContain('is done')
     expect(note.paneId).toBeTruthy()
   } finally {
-    await app.close()
+    expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
 })
 
