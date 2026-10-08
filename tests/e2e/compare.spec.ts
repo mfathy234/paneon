@@ -54,8 +54,31 @@ async function openDialog(page: Page): Promise<ReturnType<Page['getByRole']>> {
   return dialog
 }
 
-const readAgent = (logDir: string, name: string): { cwd: string; args: string[] } =>
-  JSON.parse(readFileSync(join(logDir, `${name}.json`), 'utf8'))
+const SLOW = 30_000
+
+async function readAgent(
+  logDir: string,
+  name: string,
+  args?: string[]
+): Promise<{ cwd: string; args: string[] }> {
+  const file = join(logDir, `${name}.json`)
+  let log: { cwd: string; args: string[] } | undefined
+  await expect
+    .poll(
+      () => {
+        try {
+          log = JSON.parse(readFileSync(file, 'utf8'))
+          if (args && JSON.stringify(log?.args) !== JSON.stringify(args)) log = undefined
+        } catch {
+          log = undefined
+        }
+        return log !== undefined
+      },
+      { timeout: SLOW, message: `the fake ${name} agent did not write ${file}` }
+    )
+    .toBe(true)
+  return log as { cwd: string; args: string[] }
+}
 
 test('asks two agents in separate worktrees, links the panes and compares or keeps one', async () => {
   const sandbox = createSandbox()
@@ -94,11 +117,9 @@ test('asks two agents in separate worktrees, links the panes and compares or kee
     await expect(page.locator('.compare-head')).toContainText('Why does the "login" test fail')
     await expect(page.locator('.compare-group .pane').first().locator('.pane-header .agent-mark.claude')).toHaveCount(1)
     await expect(page.locator('.compare-group .pane').nth(1).locator('.pane-header .agent-mark.codex')).toHaveCount(1)
-    await expect.poll(() => existsSync(join(logDir, 'codex.json'))).toBe(true)
-    await expect.poll(() => existsSync(join(logDir, 'claude.json'))).toBe(true)
 
-    const claude = readAgent(logDir, 'claude')
-    const codex = readAgent(logDir, 'codex')
+    const claude = await readAgent(logDir, 'claude')
+    const codex = await readAgent(logDir, 'codex')
     expect(claude.args).toEqual([PROMPT])
     expect(codex.args).toEqual([PROMPT])
     const sideA = claude.cwd
@@ -166,10 +187,9 @@ test('keeps both sides, removes a clean worktree after a named confirmation and 
     await dialog.getByLabel('Prompt').fill('-v is not a flag')
     await dialog.getByRole('button', { name: 'Ask both' }).click()
     await expect(dialog).toHaveCount(0)
-    await expect.poll(() => existsSync(join(logDir, 'gemini.json')) && existsSync(join(logDir, 'claude.json'))).toBe(true)
-    expect(readAgent(logDir, 'gemini').args).toEqual(['--prompt-interactive=-v is not a flag'])
-    expect(readAgent(logDir, 'claude').args).toEqual(['--', '-v is not a flag'])
-    const sideA = readAgent(logDir, 'gemini').cwd
+    expect((await readAgent(logDir, 'gemini')).args).toEqual(['--prompt-interactive=-v is not a flag'])
+    expect((await readAgent(logDir, 'claude')).args).toEqual(['--', '-v is not a flag'])
+    const sideA = (await readAgent(logDir, 'gemini')).cwd
 
     await page.getByRole('button', { name: 'Keep both' }).click()
     await expect(page.locator('.compare-group')).toHaveCount(0)
@@ -189,10 +209,9 @@ test('keeps both sides, removes a clean worktree after a named confirmation and 
     await second.getByRole('button', { name: 'Ask both' }).click()
     await expect(second).toHaveCount(0)
     await expect(page.locator('.compare-group .pane')).toHaveCount(2)
-    await expect.poll(() => readAgent(logDir, 'codex').args).toEqual(['Tidy the invoices module'])
-    await expect.poll(() => readAgent(logDir, 'claude').args).toEqual(['Tidy the invoices module'])
-    const codexCwd = readAgent(logDir, 'codex').cwd
-    const claudeCwd = readAgent(logDir, 'claude').cwd
+    const tidy = ['Tidy the invoices module']
+    const codexCwd = (await readAgent(logDir, 'codex', tidy)).cwd
+    const claudeCwd = (await readAgent(logDir, 'claude', tidy)).cwd
     expect(codexCwd).not.toBe(sideA)
 
     await page.getByRole('button', { name: 'Keep B', exact: true }).click()
@@ -201,7 +220,7 @@ test('keeps both sides, removes a clean worktree after a named confirmation and 
     await expect(clean.getByRole('heading')).toHaveText('Remove the worktree of A?')
     await expect(clean).toContainText('has no uncommitted files')
     await clean.getByRole('button', { name: /^Remove compare\// }).click()
-    await expect.poll(() => existsSync(codexCwd)).toBe(false)
+    await expect.poll(() => existsSync(codexCwd), { timeout: SLOW }).toBe(false)
     await expect(page.locator('.toast').last()).toContainText('Removed compare/')
     expect(existsSync(claudeCwd)).toBe(true)
     expect(git(repo, 'branch', '--list', 'compare/*').split('\n').filter(Boolean)).toHaveLength(3)
@@ -233,9 +252,8 @@ test('works in a folder that is not a git repository and reports why worktrees a
     await dialog.getByLabel('Prompt').fill('Draft the release notes')
     await dialog.getByRole('button', { name: 'Ask both' }).click()
     await expect(dialog).toHaveCount(0)
-    await expect.poll(() => existsSync(join(logDir, 'claude.json')) && existsSync(join(logDir, 'codex.json'))).toBe(true)
-    expect(readAgent(logDir, 'claude').cwd).toBe(plain)
-    expect(readAgent(logDir, 'codex').cwd).toBe(plain)
+    expect((await readAgent(logDir, 'claude')).cwd).toBe(plain)
+    expect((await readAgent(logDir, 'codex')).cwd).toBe(plain)
     await expect(page.getByRole('button', { name: 'Diff A vs B' })).toBeDisabled()
 
     await page.getByRole('button', { name: 'Keep A', exact: true }).click()

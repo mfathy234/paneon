@@ -117,9 +117,14 @@ test('continues a session in another agent with an editable summary and a from c
     await expect(page.locator('.pane').nth(1).locator('.chip-from')).toHaveText('from Claude')
     await expect(page.locator('.pane').nth(1).locator('.pane-header .agent-mark.codex')).toHaveCount(1)
     await expect(page.locator('.pane').first().locator('.chip-from')).toBeHidden()
-    await expect.poll(() => existsSync(join(logDir, 'codex.json'))).toBe(true)
-    const codex = JSON.parse(readFileSync(join(logDir, 'codex.json'), 'utf8'))
-    expect(codex.args).toEqual([edited])
+    const codexLog = join(logDir, 'codex.json')
+    await expect
+      .poll(() => (existsSync(codexLog) ? JSON.parse(readFileSync(codexLog, 'utf8')).args : null), {
+        timeout: 30_000,
+        message: `the fake codex agent did not write ${codexLog}`
+      })
+      .toEqual([edited])
+    const codex = JSON.parse(readFileSync(codexLog, 'utf8'))
     expect(codex.cwd).toBe(sandbox.projectFolder)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[1]?.tabs?.[0]?.from).toBe('claude')
     await page.screenshot({ path: join(SCREENS, '51-handoff-pane.png') })
