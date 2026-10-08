@@ -6,6 +6,8 @@
 
 <p align="center"><strong>One window for all your AI coding agents.</strong></p>
 
+<p align="center">Website: <a href="https://paneon.pages.dev">https://paneon.pages.dev</a></p>
+
 <p align="center">
   A Windows desktop app that puts Claude Code, OpenAI Codex CLI and Google Gemini CLI side by side in a grid of
   large, readable terminals, one per task, with live status, plan progress and needs-you alerts.

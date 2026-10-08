@@ -1,16 +1,20 @@
 # Paneon website
 
-A single static page: `index.html`, `style.css`, `release.js` and `assets/`. No framework and no build step. Open `index.html` in a browser, or serve the folder with any static server (`npx serve site`).
+A single static page: `index.html`, `style.css`, `release.js`, `motion.js` (scroll reveals, logo intro and terminal typing, all skipped under reduced motion) and `assets/`. No framework and no build step. Open `index.html` in a browser, or serve the folder with any static server (`npx serve site`).
 
 The download buttons link to the latest GitHub release. `release.js` asks `api.github.com` for the newest release and points the buttons at the Setup and Portable assets and fills in the version. With JavaScript off, or when the API is rate limited, the buttons keep their fallback link to `https://github.com/mfathy234/paneon/releases/latest`.
 
 ## Canonical URL
 
-The site URL is `https://mfathy234.github.io/paneon/`. It appears in `index.html` in the `canonical` link, `og:url`, `og:image` and `twitter:image`. If you move to a custom domain, replace that prefix in those four places (search for `mfathy234.github.io/paneon`).
+The site URL is `https://paneon.pages.dev/`. It appears in `index.html` in the `canonical` link, `og:url`, `og:image` and `twitter:image`. If you move to a custom domain, replace that prefix in those four places (search for `paneon.pages.dev`).
 
 `assets/og.png` is the 1200x630 social preview.
 
-## Hosting on GitHub Pages
+## Hosting
+
+The primary host is Cloudflare Pages at `paneon.pages.dev`: build output directory `site`, no build command. The GitHub Pages workflow is kept as a mirror at `https://mfathy234.github.io/paneon/`.
+
+## Hosting on GitHub Pages (mirror)
 
 1. Merge `site/` and `.github/workflows/pages.yml` into `main`.
 2. In the repository, open Settings > Pages and set Source to **GitHub Actions**.
