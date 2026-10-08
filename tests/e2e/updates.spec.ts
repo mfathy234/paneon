@@ -335,14 +335,17 @@ test('a fresh install records the version and shows setup instead of What is new
   }
 })
 
-test('an existing install without a recorded version records it quietly', async () => {
+test('an install from 0.3.0 without a recorded version is treated as updated from 0.3.0', async () => {
   const sandbox = createSandbox()
+  const { lastSeenVersion: _dropped, ...legacy } = readSettings(sandbox)
+  writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(legacy), 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
-    const version = APP_VERSION
-    await expect(page.locator('.empty h2')).toHaveText('No sessions yet')
-    await expect(page.locator('.whats-new')).toHaveCount(0)
-    await expect.poll(() => readSettings(sandbox).lastSeenVersion).toBe(version)
+    const dialog = page.getByRole('dialog', { name: `What's new in Paneon ${APP_VERSION}` })
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('Updated from 0.3.0')
+    await dialog.getByRole('button', { name: 'Got it' }).click()
+    await expect.poll(() => readSettings(sandbox).lastSeenVersion).toBe(APP_VERSION)
   } finally {
     await closeApp(app)
   }

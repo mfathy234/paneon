@@ -37,6 +37,7 @@ export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
   for (const dir of [userData, projectFolder, sessionsDir, codexHome, geminiHome, claudeHome]) mkdirSync(dir, { recursive: true })
   const settings = {
     version: 2,
+    lastSeenVersion: APP_VERSION,
     projects: [
       { id: 'smoke', name: 'Smoke', folder: projectFolder },
       { id: 'gone', name: 'Missing', folder: join(root, 'does-not-exist') }

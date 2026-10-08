@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createFakeTools } from '../support/fakeTools'
-import { closeApp, createSandbox, launchApp, runCli, type Sandbox } from '../e2e/helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, runCli, type Sandbox } from '../e2e/helpers'
 import { CLAUDE_IDS, composeCliImage, writeHistory, type CliRun } from './resumeFixtures'
 
 const OUT = resolve(__dirname, '../../docs/screenshots')
@@ -22,7 +22,7 @@ const folder = (name: string): string => join(DEMO_ROOT, name)
 
 function seed(sandbox: Sandbox, withFolders: boolean): void {
   if (withFolders) for (const p of PROJECTS) mkdirSync(folder(p.name), { recursive: true })
-  const settings = { version: 2, projects: PROJECTS.map((p) => ({ ...p, folder: folder(p.name) })) }
+  const settings = { version: 2, lastSeenVersion: APP_VERSION, projects: PROJECTS.map((p) => ({ ...p, folder: folder(p.name) })) }
   writeFileSync(join(sandbox.userData, 'settings.json'), JSON.stringify(settings), 'utf8')
 }
 
