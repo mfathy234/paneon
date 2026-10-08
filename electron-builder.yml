@@ -1,0 +1,33 @@
+appId: io.github.mfathy234.paneon
+productName: Paneon
+directories:
+  output: release
+files:
+  - out/**
+  - package.json
+  - build/icon.png
+asar: true
+asarUnpack:
+  - node_modules/node-pty/**
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+win:
+  target:
+    - target: nsis
+      arch: x64
+    - target: portable
+      arch: x64
+  signAndEditExecutable: true
+  signExecutable: false
+nsis:
+  artifactName: Paneon-Setup-${version}.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+portable:
+  artifactName: Paneon-Portable-${version}.${ext}
+publish:
+  provider: github
+  owner: mfathy234
+  repo: paneon

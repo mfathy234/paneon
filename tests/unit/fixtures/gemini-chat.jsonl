@@ -1,0 +1,7 @@
+{"sessionId":"11111111-2222-4333-8444-555555555555","projectHash":"0000","startTime":"2026-10-08T12:00:00.000Z","lastUpdated":"2026-10-08T12:00:00.000Z","kind":"main"}
+{"id":"m1","timestamp":"2026-10-08T12:00:05.000Z","type":"user","content":[{"text":"/help"}]}
+{"id":"m2","timestamp":"2026-10-08T12:00:09.000Z","type":"user","content":[{"text":"Explain   the build\nscript"}]}
+{"$set":{"lastUpdated":"2026-10-08T12:00:09.500Z"}}
+{"id":"m3","timestamp":"2026-10-08T12:00:20.000Z","type":"gemini","content":"It compiles the app.","model":"gemini-2.5-pro","tokens":{"input":10,"output":5,"total":15},"thoughts":[],"toolCalls":[]}
+{"$set":{"lastUpdated":"2026-10-08T12:00:20.500Z"}}
+not json at all

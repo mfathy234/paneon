@@ -1,0 +1,742 @@
+import {
+  DEFAULT_FONT_SIZE,
+  clampFontSize,
+  type BackgroundImage,
+  type AgentKind,
+  type CodexSession,
+  type GeminiSession,
+  type Project,
+  type QuickOpenKind,
+  type SessionInfoSettings,
+  type StatusInfo,
+  type Settings,
+  type TabAgent
+} from '../shared/types'
+import { agentOf, AGENT_NAMES } from '../shared/agents'
+import {
+  NODE_NOTE,
+  joinCommands,
+  nodeProblem,
+  planFor,
+  taskOutcome,
+  toolCommand,
+  type TaskPlan
+} from '../shared/agentTools'
+import { forgetOutput } from './ptyActivity'
+import type { OpsSnapshot } from '../shared/opsFeed'
+import type { AgentPreset } from '../shared/quickPick'
+import { api } from './api'
+import { confirmDialog } from './components/dialogs'
+import { toast } from './components/toast'
+import { derivePanes, matchAll } from './derive'
+import { nextFrame } from './dom'
+import {
+  AGENTS_PROJECT_ID,
+  mapPane,
+  mapTerm,
+  newId,
+  paneById,
+  projectById,
+  store,
+  type AppState,
+  type PaneState,
+  type TermState
+} from './state'
+import { shouldRelaunchPlain } from '../shared/resumeFallback'
+import { applyTheme } from './themeManager'
+import { disposeTerminal, getTerminal } from './terminals'
+
+const PERSIST_DELAY_MS = 300
+let persistTimer: number | undefined
+let persistPending = false
+
+function nextLabel(tabs: TermState[], agent: TabAgent): string {
+  const labels = new Set(tabs.map((t) => t.label))
+  const base = agent
+  if (!labels.has(base)) return base
+  let index = 2
+  while (labels.has(`${base} ${index}`)) index += 1
+  return `${base} ${index}`
+}
+
+function uniqueLabel(tabs: TermState[], base: string): string {
+  const labels = new Set(tabs.map((t) => t.label))
+  let candidate = base
+  let index = 2
+  while (labels.has(candidate)) {
+    candidate = `${base} ${index}`
+    index += 1
+  }
+  return candidate
+}
+
+function makeTerm(agent: TabAgent, existing: TermState[], sessionId?: string, label?: string): TermState {
+  return {
+    id: newId(),
+    agent,
+    sessionId,
+    label: label ? uniqueLabel(existing, label) : nextLabel(existing, agent),
+    startedAt: Date.now(),
+    status: 'starting'
+  }
+}
+
+function saveSettings(patch: Partial<Settings>): Promise<void> {
+  return api.updateSettings(patch).then(
+    () => undefined,
+    (error: unknown) => toast((error as Error).message || 'Could not save settings.')
+  )
+}
+
+function saveWorkspace(): Promise<void> {
+  const { focusedId } = store.state
+  const panes = store.state.panes
+    .map((pane) => ({ ...pane, tabs: pane.tabs.filter((t) => t.task === undefined) }))
+    .filter((pane) => pane.tabs.length > 0)
+  const focusedIndex = Math.max(0, panes.findIndex((p) => p.id === focusedId))
+  return saveSettings({
+    workspace: {
+      focusedIndex,
+      panes: panes.map((pane) => ({
+        projectId: pane.projectId,
+        fontSize: pane.fontSize,
+        activeIndex: Math.max(0, pane.tabs.findIndex((t) => t.id === pane.activeTabId)),
+        tabs: pane.tabs.map((t) => ({
+          agent: t.agent,
+          label: t.label,
+          sessionId: t.sessionId,
+          agentsOpen: t.agentsOpen === true ? true : undefined
+        }))
+      }))
+    }
+  })
+}
+
+export function persistWorkspace(): void {
+  window.clearTimeout(persistTimer)
+  persistPending = true
+  persistTimer = window.setTimeout(() => {
+    persistPending = false
+    void saveWorkspace()
+  }, PERSIST_DELAY_MS)
+}
+
+export async function flushWorkspace(): Promise<void> {
+  if (!persistPending) return
+  window.clearTimeout(persistTimer)
+  persistPending = false
+  await saveWorkspace()
+}
+
+async function launch(paneId: string, termId: string, resume: boolean): Promise<void> {
+  await nextFrame()
+  await nextFrame()
+  const state = store.state
+  const pane = paneById(state, paneId)
+  const project = pane ? projectById(state, pane.projectId) : undefined
+  const term = pane?.tabs.find((t) => t.id === termId)
+  if (!pane || !project || !term) return
+  const view = getTerminal(termId)
+  view?.fitNow()
+  const startedAt = Date.now()
+  const sessionId = term.agent === 'gemini' && !term.sessionId ? crypto.randomUUID() : term.sessionId
+  if (sessionId !== term.sessionId) {
+    store.set((s) => mapTerm(s, termId, (t) => ({ ...t, sessionId })))
+    persistWorkspace()
+  }
+  const result = await api.spawn({
+    id: termId,
+    agent: term.agent,
+    cwd: project.folder,
+    resume,
+    sessionId,
+    command: term.command,
+    cols: view?.cols ?? 120,
+    rows: view?.rows ?? 30
+  })
+  if (result.ok) {
+    store.set((s) =>
+      mapTerm(s, termId, (t) => ({ ...t, status: 'running', pid: result.pid, startedAt, resumed: resume }))
+    )
+    return
+  }
+  view?.writeLine(`\x1b[31m${result.error}\x1b[0m`)
+  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, status: 'exited', pid: undefined })))
+  toast(result.error)
+}
+
+export function handleTerminalExit(termId: string, exitCode: number): void {
+  const pane = store.state.panes.find((p) => p.tabs.some((t) => t.id === termId))
+  const tab = pane?.tabs.find((t) => t.id === termId)
+  if (!pane || !tab) return
+  if (tab.task) {
+    getTerminal(termId)?.writeLine(`[2m[process exited with code ${exitCode}][0m`)
+    store.set((s) => mapTerm(s, termId, (t) => ({ ...t, status: 'exited', exitCode })))
+    void finishAgentTask(tab, exitCode)
+    return
+  }
+  const relaunch = shouldRelaunchPlain({
+    agent: tab.agent,
+    resumed: tab.resumed === true,
+    alreadyRetried: tab.retried === true,
+    runtimeMs: Date.now() - tab.startedAt,
+    exitCode,
+    output: getTerminal(termId)?.bufferText() ?? ''
+  })
+  if (relaunch) {
+    getTerminal(termId)?.writeLine('\x1b[2m--- no earlier session, starting a new one ---\x1b[0m')
+    store.set((s) =>
+      mapTerm(s, termId, (t) => ({ ...t, status: 'starting', exitCode: undefined, retried: true, sessionId: undefined }))
+    )
+    void launch(pane.id, termId, false)
+    return
+  }
+  getTerminal(termId)?.writeLine(`\x1b[2m[process exited with code ${exitCode}]\x1b[0m`)
+  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, status: 'exited', exitCode })))
+}
+
+export async function startSession(projectId: string, agent?: AgentKind, resumeId?: string): Promise<void> {
+  const project = projectById(store.state, projectId)
+  if (!project) return
+  const tab = makeTerm(agent ?? agentOf(project), [], resumeId)
+  const pane: PaneState = {
+    id: newId(),
+    projectId,
+    tabs: [tab],
+    activeTabId: tab.id,
+    fontSize: clampFontSize(project.fontSize ?? DEFAULT_FONT_SIZE)
+  }
+  store.set((s) => ({
+    ...s,
+    panes: [...s.panes, pane],
+    focusedId: pane.id,
+    maximizedId: s.maximizedId ? pane.id : null,
+    view: 'grid',
+    quickPickOpen: false,
+    sidebarOverride: null
+  }))
+  persistWorkspace()
+  void refreshBranches()
+  void refreshGitChanges()
+  await launch(pane.id, tab.id, resumeId !== undefined)
+}
+
+export async function addTab(paneId: string, agent: TabAgent, input?: string): Promise<void> {
+  const pane = paneById(store.state, paneId)
+  if (!pane) return
+  const tab = makeTerm(agent, pane.tabs)
+  store.set((s) => mapPane(s, paneId, (p) => ({ ...p, tabs: [...p.tabs, tab], activeTabId: tab.id })))
+  persistWorkspace()
+  await launch(paneId, tab.id, false)
+  if (input) api.write(tab.id, input)
+}
+
+function paneFolder(paneId: string): string | null {
+  const pane = paneById(store.state, paneId)
+  return (pane ? projectById(store.state, pane.projectId)?.folder : undefined) ?? null
+}
+
+export async function openPaneFolder(paneId: string, kind: QuickOpenKind): Promise<void> {
+  const folder = paneFolder(paneId)
+  if (folder) await api.quickOpen(kind, folder)
+}
+
+export async function showPaneDiff(paneId: string): Promise<void> {
+  await addTab(paneId, 'shell', 'git diff\r')
+}
+
+export function setActiveTab(paneId: string, termId: string): void {
+  store.set((s) => mapPane({ ...s, focusedId: paneId }, paneId, (p) => ({ ...p, activeTabId: termId })))
+  persistWorkspace()
+}
+
+export async function restartTab(paneId: string, termId: string): Promise<void> {
+  const pane = paneById(store.state, paneId)
+  const tab = pane?.tabs.find((t) => t.id === termId)
+  if (!pane || !tab) return
+  getTerminal(termId)?.writeLine('\x1b[2m--- restarted ---\x1b[0m')
+  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, status: 'starting', exitCode: undefined, retried: false })))
+  await launch(paneId, termId, canResume(tab))
+}
+
+function canResume(tab: TermState): boolean {
+  return tab.agent === 'claude' || ((tab.agent === 'codex' || tab.agent === 'gemini') && Boolean(tab.sessionId))
+}
+
+async function stopTerminal(termId: string): Promise<void> {
+  forgetOutput(termId)
+  await api.kill(termId)
+  disposeTerminal(termId)
+}
+
+function removeTab(state: AppState, paneId: string, termId: string): AppState {
+  const pane = paneById(state, paneId)
+  if (!pane) return state
+  const tabs = pane.tabs.filter((t) => t.id !== termId)
+  if (tabs.length === 0) return removePane(state, paneId)
+  const index = pane.tabs.findIndex((t) => t.id === termId)
+  const activeTabId = pane.activeTabId === termId ? tabs[Math.min(index, tabs.length - 1)].id : pane.activeTabId
+  return mapPane(state, paneId, (p) => ({ ...p, tabs, activeTabId }))
+}
+
+function removePane(state: AppState, paneId: string): AppState {
+  const index = state.panes.findIndex((p) => p.id === paneId)
+  const panes = state.panes.filter((p) => p.id !== paneId)
+  const neighbour = panes[Math.min(index, panes.length - 1)]
+  return {
+    ...state,
+    panes,
+    focusedId: state.focusedId === paneId ? (neighbour?.id ?? null) : state.focusedId,
+    maximizedId: state.maximizedId === paneId ? null : state.maximizedId
+  }
+}
+
+export async function closeTerminal(paneId: string, termId: string): Promise<void> {
+  const pane = paneById(store.state, paneId)
+  const tab = pane?.tabs.find((t) => t.id === termId)
+  if (!pane || !tab) return
+  if (pane.tabs.length === 1) return closePane(paneId)
+  if (tab.agent !== 'shell' && tab.status !== 'exited') {
+    const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
+    const project = view?.project?.name ?? 'this project'
+    const confirmed = await confirmDialog({
+      title: `Close ${tab.label}?`,
+      body: `This stops the ${AGENT_NAMES[tab.agent]} terminal ${tab.label} in ${project}. Its files stay on disk.`,
+      confirmLabel: `Close ${tab.label}`
+    })
+    if (!confirmed) return
+  }
+  await stopTerminal(termId)
+  store.set((s) => removeTab(s, paneId, termId))
+  persistWorkspace()
+}
+
+export async function closePane(paneId: string): Promise<void> {
+  const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
+  if (!view) return
+  const title = view.title.toUpperCase()
+  const project = view.project?.name ?? 'this project'
+  const hasAgent = view.pane.tabs.some((t) => t.agent !== 'shell')
+  const agentName = AGENT_NAMES[view.agent === 'shell' ? 'claude' : view.agent]
+  const others = view.pane.tabs.length - 1
+  const extra = others === 0 ? '' : others === 1 ? ' Its 1 other terminal stops too.' : ` Its ${others} other terminals stop too.`
+  const body = hasAgent
+    ? `This stops the ${agentName} session ${title} in ${project}. Its files stay on disk.${extra}`
+    : `This closes the terminal${view.pane.tabs.length === 1 ? '' : 's'} in ${project}.`
+  const confirmed = await confirmDialog({ title: `Close ${title}?`, body, confirmLabel: `Close ${title}` })
+  if (!confirmed) return
+  await discardPane(paneId)
+}
+
+async function discardPane(paneId: string): Promise<void> {
+  const pane = paneById(store.state, paneId)
+  if (!pane) return
+  await Promise.all(pane.tabs.map((t) => stopTerminal(t.id)))
+  store.set((s) => removePane(s, paneId))
+  persistWorkspace()
+}
+
+export function focusPane(paneId: string): void {
+  const state = store.state
+  if (state.focusedId === paneId && (state.maximizedId === null || state.maximizedId === paneId)) return
+  store.set((s) => ({
+    ...s,
+    focusedId: paneId,
+    view: 'grid',
+    maximizedId: s.maximizedId ? paneId : null,
+    detailsPaneId: s.detailsPaneId === paneId ? paneId : null
+  }))
+  persistWorkspace()
+}
+
+export function focusRelative(delta: number): void {
+  const { panes, focusedId } = store.state
+  if (panes.length === 0) return
+  const current = Math.max(0, panes.findIndex((p) => p.id === focusedId))
+  focusPane(panes[(current + delta + panes.length) % panes.length].id)
+}
+
+export function toggleMaximize(paneId?: string): void {
+  queueMicrotask(() => void refreshGitChanges())
+  const target = paneId ?? store.state.focusedId
+  if (!target || !paneById(store.state, target)) return
+  store.set((s) => ({
+    ...s,
+    focusedId: target,
+    view: 'grid',
+    maximizedId: s.maximizedId === target ? null : target,
+    detailsPaneId: null,
+    sidebarOverride: null
+  }))
+}
+
+export function restoreGrid(): void {
+  if (store.state.maximizedId) {
+    store.set((s) => ({ ...s, maximizedId: null, detailsPaneId: null, sidebarOverride: null }))
+  }
+}
+
+export function toggleAgents(termId: string): void {
+  store.set((s) => mapTerm(s, termId, (t) => ({ ...t, agentsOpen: t.agentsOpen !== true })))
+  persistWorkspace()
+}
+
+export function openDetails(paneId: string): void {
+  if (!paneById(store.state, paneId)) return
+  queueMicrotask(() => void refreshGitChanges())
+  store.set((s) => ({ ...s, focusedId: paneId, view: 'grid', maximizedId: paneId, detailsPaneId: paneId, sidebarOverride: null }))
+}
+
+export function closeDetails(): void {
+  if (store.state.detailsPaneId) store.set((s) => ({ ...s, detailsPaneId: null }))
+}
+
+export function toggleDetails(paneId: string): void {
+  if (store.state.detailsPaneId === paneId) closeDetails()
+  else openDetails(paneId)
+}
+
+function updateProjectFont(state: AppState, projectId: string, fontSize: number): AppState {
+  const projects = state.settings.projects.map((p) => (p.id === projectId ? { ...p, fontSize } : p))
+  return { ...state, settings: { ...state.settings, projects } }
+}
+
+function saveProjects(): void {
+  void saveSettings({ projects: store.state.settings.projects })
+}
+
+export function setPaneFont(paneId: string, size: number): void {
+  const pane = paneById(store.state, paneId)
+  if (!pane) return
+  const fontSize = clampFontSize(size)
+  store.set((s) => updateProjectFont(mapPane(s, paneId, (p) => ({ ...p, fontSize })), pane.projectId, fontSize))
+  saveProjects()
+  persistWorkspace()
+}
+
+export function zoomPane(paneId: string, delta: number): void {
+  const pane = paneById(store.state, paneId)
+  if (pane) setPaneFont(paneId, pane.fontSize + delta)
+}
+
+export function zoomAll(delta: number): void {
+  store.set((s) => {
+    let next = s
+    for (const pane of s.panes) {
+      const fontSize = clampFontSize(pane.fontSize + delta)
+      next = updateProjectFont(mapPane(next, pane.id, (p) => ({ ...p, fontSize })), pane.projectId, fontSize)
+    }
+    return next
+  })
+  saveProjects()
+  persistWorkspace()
+}
+
+export function toggleSidebar(): void {
+  const state = store.state
+  const maximized = state.view === 'grid' && state.maximizedId !== null
+  const collapsed = state.sidebarOverride ?? (maximized || state.settings.sidebarCollapsed)
+  if (maximized) {
+    store.patch({ sidebarOverride: !collapsed })
+    return
+  }
+  store.set((s) => ({
+    ...s,
+    sidebarOverride: null,
+    settings: { ...s.settings, sidebarCollapsed: !collapsed }
+  }))
+  void saveSettings({ sidebarCollapsed: !collapsed })
+}
+
+export function toggleProjectExpanded(projectId: string): void {
+  store.set((s) => ({
+    ...s,
+    collapsedProjects: { ...s.collapsedProjects, [projectId]: !s.collapsedProjects[projectId] }
+  }))
+}
+
+export function showView(view: AppState['view']): void {
+  store.patch({ view })
+}
+
+export function openQuickPick(preset: AgentPreset = 'default'): void {
+  store.patch({ quickPickOpen: true, quickPickPreset: preset, themePickerOpen: false })
+}
+
+export function closeQuickPick(): void {
+  store.patch({ quickPickOpen: false })
+}
+
+export function toggleThemePicker(open?: boolean): void {
+  store.set((s) => ({ ...s, themePickerOpen: open ?? !s.themePickerOpen, quickPickOpen: false }))
+}
+
+export async function refreshBranches(): Promise<void> {
+  const state = store.state
+  const folders = new Set<string>()
+  for (const pane of state.panes) {
+    const project = projectById(state, pane.projectId)
+    if (project) folders.add(project.folder)
+  }
+  const entries = await Promise.all([...folders].map(async (f) => [f, await api.gitBranch(f)] as const))
+  const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
+  if (changed) store.set((s) => ({ ...s, branches: { ...s.branches, ...Object.fromEntries(entries) } }))
+}
+
+export function setTheme(id: string): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, theme: { ...s.settings.theme, id } } }))
+  applyTheme(store.state.settings.theme)
+  void saveSettings({ theme: store.state.settings.theme })
+}
+
+export function setImage(patch: Partial<BackgroundImage>): void {
+  const image = { ...store.state.settings.theme.image, ...patch }
+  const enabled = image.enabled && image.path !== null
+  const theme = { ...store.state.settings.theme, image: { ...image, enabled } }
+  store.set((s) => ({ ...s, settings: { ...s.settings, theme } }))
+  applyTheme(theme, 'path' in patch)
+  void saveSettings({ theme })
+}
+
+export async function addProject(): Promise<Project | null> {
+  const folder = await api.pickFolder()
+  if (!folder) return null
+  const name = folder.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || folder
+  const project: Project = { id: newId(), name, folder, defaultAgent: 'claude' }
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects: [...s.settings.projects, project] } }))
+  saveProjects()
+  return project
+}
+
+export function updateProject(
+  projectId: string,
+  change: Partial<Pick<Project, 'name' | 'folder' | 'defaultAgent'>>
+): void {
+  const projects = store.state.settings.projects.map((p) => (p.id === projectId ? { ...p, ...change } : p))
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
+  saveProjects()
+}
+
+export async function removeProject(projectId: string): Promise<void> {
+  const project = projectById(store.state, projectId)
+  if (!project) return
+  const open = store.state.panes.filter((p) => p.projectId === projectId)
+  const body =
+    open.length > 0
+      ? `This removes ${project.name} from Paneon and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.`
+      : `This removes ${project.name} from Paneon. The folder stays on disk.`
+  const confirmed = await confirmDialog({
+    title: `Remove ${project.name}?`,
+    body,
+    confirmLabel: `Remove ${project.name}`
+  })
+  if (!confirmed) return
+  for (const pane of open) await discardPane(pane.id)
+  const projects = store.state.settings.projects.filter((p) => p.id !== projectId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
+  saveProjects()
+}
+
+export async function restoreWorkspace(): Promise<void> {
+  const { settings } = store.state
+  const restored: PaneState[] = []
+  for (const saved of settings.workspace.panes) {
+    const project = projectById(store.state, saved.projectId)
+    if (!project) continue
+    const tabs: TermState[] = []
+    for (const tab of saved.tabs) {
+      tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, agentsOpen: tab.agentsOpen })
+    }
+    restored.push({
+      id: newId(),
+      projectId: project.id,
+      tabs,
+      activeTabId: tabs[Math.min(saved.activeIndex, tabs.length - 1)].id,
+      fontSize: clampFontSize(saved.fontSize)
+    })
+  }
+  if (restored.length === 0) return
+  const focused = restored[Math.min(settings.workspace.focusedIndex, restored.length - 1)]
+  store.patch({ panes: restored, focusedId: focused.id })
+  void refreshBranches()
+  void refreshGitChanges()
+  await Promise.all(
+    restored.flatMap((pane) => pane.tabs.map((tab) => launch(pane.id, tab.id, canResume(tab))))
+  )
+}
+
+export function setGeminiSessions(geminiSessions: GeminiSession[]): void {
+  store.patch({ geminiSessions })
+}
+
+export function setCodexSessions(codexSessions: CodexSession[]): void {
+  store.set((state) => adoptCodexIds({ ...state, codexSessions }))
+}
+
+function adoptCodexIds(state: AppState): AppState {
+  const matched = matchAll(state).codex
+  const adopted = new Map<string, string>()
+  for (const pane of state.panes) {
+    for (const tab of pane.tabs) {
+      const hit = matched.get(tab.id)
+      if (tab.agent === 'codex' && !tab.sessionId && hit) adopted.set(tab.id, hit.sessionId)
+    }
+  }
+  if (adopted.size === 0) return state
+  queueMicrotask(persistWorkspace)
+  return {
+    ...state,
+    panes: state.panes.map((pane) => ({
+      ...pane,
+      tabs: pane.tabs.map((tab) => (adopted.has(tab.id) ? { ...tab, sessionId: adopted.get(tab.id) } : tab))
+    }))
+  }
+}
+
+export function setOpsSnapshots(snapshots: OpsSnapshot[]): void {
+  store.patch({ opsInfo: Object.fromEntries(snapshots.map((snapshot) => [snapshot.sessionId, snapshot])) })
+}
+
+export function setStatusInfos(infos: StatusInfo[]): void {
+  store.patch({ statusInfo: Object.fromEntries(infos.map((info) => [info.sessionId, info])) })
+}
+
+function visibleFolders(state: AppState): string[] {
+  if (state.view !== 'grid' || document.visibilityState !== 'visible') return []
+  const folders = new Set<string>()
+  for (const pane of state.panes) {
+    if (state.maximizedId && state.maximizedId !== pane.id) continue
+    const project = projectById(state, pane.projectId)
+    if (project) folders.add(project.folder)
+  }
+  return [...folders]
+}
+
+export async function refreshGitChanges(): Promise<void> {
+  const folders = visibleFolders(store.state)
+  const entries = await Promise.all(folders.map(async (f) => [f, await api.gitChanges(f)] as const))
+  const known = store.state.gitChanges
+  const changed = entries.some(([folder, value]) => JSON.stringify(known[folder]) !== JSON.stringify(value))
+  if (changed) store.set((s) => ({ ...s, gitChanges: { ...s.gitChanges, ...Object.fromEntries(entries) } }))
+}
+
+export function setSessionInfo(change: Partial<SessionInfoSettings>): void {
+  const sessionInfo = { ...store.state.settings.sessionInfo, ...change }
+  store.set((s) => ({ ...s, settings: { ...s.settings, sessionInfo } }))
+  void saveSettings({ sessionInfo })
+}
+
+export async function refreshBridge(): Promise<void> {
+  const status = await api.bridgeStatus()
+  store.set((s) => ({ ...s, bridge: { ...s.bridge, installed: status.installed, error: status.error } }))
+}
+
+const BRIDGE_COMMAND_NOTE = 'It then runs your previous status line, if any, and prints its output unchanged.'
+
+export async function enableBridge(): Promise<void> {
+  if (store.state.bridge.busy) return
+  const preview = await api.bridgePreview()
+  if (preview.error) {
+    store.set((s) => ({ ...s, bridge: { ...s.bridge, error: preview.error, note: null } }))
+    return
+  }
+  const previous = preview.previousCommand
+    ? `Your current status line (${preview.previousCommand}) is backed up and keeps running.`
+    : 'You have no status line set today.'
+  const confirmed = await confirmDialog({
+    title: 'Show live session info?',
+    body:
+      `This edits ~/.claude/settings.json (${preview.settingsPath}): its statusLine is set to a small script that ` +
+      `saves each session's status for Paneon. ${BRIDGE_COMMAND_NOTE} ${previous} ` +
+      'Turning this off puts the previous value back.',
+    confirmLabel: 'Edit ~/.claude/settings.json',
+    danger: false
+  })
+  if (!confirmed) return
+  await runBridge(() => api.bridgeInstall())
+}
+
+export async function disableBridge(): Promise<void> {
+  if (store.state.bridge.busy) return
+  await runBridge(() => api.bridgeUninstall())
+}
+
+async function runBridge(action: () => Promise<{ ok: boolean; error?: string; note?: string }>): Promise<void> {
+  store.set((s) => ({ ...s, bridge: { ...s.bridge, busy: true, error: null, note: null } }))
+  const result = await action()
+  const status = await api.bridgeStatus()
+  store.set((s) => ({
+    ...s,
+    bridge: {
+      installed: status.installed,
+      busy: false,
+      error: result.ok ? status.error : (result.error ?? 'Could not change the status line.'),
+      note: result.ok ? (result.note ?? null) : null
+    }
+  }))
+}
+
+export async function refreshAgentTools(force = false): Promise<void> {
+  store.set((s) => ({ ...s, agents: { ...s.agents, checking: true } }))
+  try {
+    const report = await api.checkAgents(force)
+    store.set((s) => ({ ...s, agents: { report, checking: false } }))
+  } catch {
+    store.set((s) => ({ ...s, agents: { ...s.agents, checking: false } }))
+  }
+}
+
+async function openTaskTab(plan: TaskPlan, command: string, before: TermState['task']): Promise<void> {
+  const state = store.state
+  const target = paneById(state, state.focusedId)
+  const base = { agent: 'shell' as const, command, task: before }
+  if (target) {
+    const tab: TermState = { ...makeTerm('shell', target.tabs, undefined, plan.label), ...base }
+    store.set((s) => ({
+      ...mapPane({ ...s, focusedId: target.id, view: 'grid' }, target.id, (p) => ({
+        ...p,
+        tabs: [...p.tabs, tab],
+        activeTabId: tab.id
+      }))
+    }))
+    await launch(target.id, tab.id, false)
+    return
+  }
+  const tab: TermState = { ...makeTerm('shell', [], undefined, plan.label), ...base }
+  const pane: PaneState = {
+    id: newId(),
+    projectId: AGENTS_PROJECT_ID,
+    tabs: [tab],
+    activeTabId: tab.id,
+    fontSize: DEFAULT_FONT_SIZE
+  }
+  store.set((s) => ({ ...s, panes: [...s.panes, pane], focusedId: pane.id, view: 'grid', sidebarOverride: null }))
+  await launch(pane.id, tab.id, false)
+}
+
+export async function runAgentTask(selection: AgentKind[] | 'updates'): Promise<void> {
+  const { report } = store.state.agents
+  if (!report) return
+  const plan = planFor(report.tools, selection)
+  if (!plan) return
+  const needsNode = report.tools.some((tool) => plan.agents.includes(tool.agent) && toolCommand(tool).needsNode)
+  if (needsNode && nodeProblem(report.node)) {
+    toast(NODE_NOTE, 'info')
+    return
+  }
+  const command = joinCommands(plan.commands, store.state.info.shellCommand)
+  await openTaskTab(plan, command, { agents: plan.agents, before: report.tools })
+}
+
+async function finishAgentTask(tab: TermState, exitCode: number): Promise<void> {
+  const task = tab.task
+  if (!task) return
+  await refreshAgentTools(false)
+  const after = store.state.agents.report?.tools ?? []
+  const outcomes = task.agents.flatMap((agent) => {
+    const before = task.before.find((t) => t.agent === agent)
+    return before ? [taskOutcome(before, after.find((t) => t.agent === agent), exitCode)] : []
+  })
+  if (outcomes.length === 0) return
+  toast(outcomes.map((o) => o.text).join(' '), outcomes.every((o) => o.ok) ? 'info' : 'error')
+}

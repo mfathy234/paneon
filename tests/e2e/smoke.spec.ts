@@ -1,0 +1,342 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { expect, test } from '@playwright/test'
+import { QUIT_BUDGET_MS, activeTermId, bufferText, closeApp, createSandbox, fontSize, launchApp } from './helpers'
+
+const SCREENS = 'test-results/screens'
+const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
+
+test('starts a session from the sidebar without any prompt and drives the grid', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await expect(page.locator('.empty h2')).toHaveText('No sessions yet')
+
+    await page.getByRole('button', { name: NEW_IN_SMOKE }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('[role="dialog"], [role="alertdialog"], .overlay')).toHaveCount(0)
+    await expect(page.locator('.pane-title')).toHaveText('1 · Smoke')
+    await expect(page.locator('.pane-fresh')).toBeVisible()
+    await expect(page.locator('.pane .status')).toHaveText('idle')
+
+    const claudeId = await activeTermId(page)
+    await expect.poll(() => bufferText(page, claudeId), { timeout: 20_000 }).toContain('Smoke Project')
+    await page.screenshot({ path: join(SCREENS, '1-single.png') })
+
+    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await page.getByRole('menuitem', { name: 'Shell' }).click()
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['claude', 'shell'])
+    await expect(page.locator('.tabs [role="tab"][aria-selected="true"]')).toHaveText('shell')
+    await page.screenshot({ path: join(SCREENS, '2-shell-tab.png') })
+
+    await page.getByRole('button', { name: 'Maximize pane' }).click()
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await expect(page.locator('.sidebar.rail')).toHaveCount(1)
+    await expect(page.locator('.pane-strip')).toBeVisible()
+    await page.screenshot({ path: join(SCREENS, '3-maximized.png') })
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.pane.maximized')).toHaveCount(0)
+    await expect(page.locator('.sidebar.rail')).toHaveCount(0)
+
+    await page.keyboard.press('Control+Enter')
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Restore pane to grid' }).click()
+    await expect(page.locator('.pane.maximized')).toHaveCount(0)
+
+    const shellId = await activeTermId(page)
+    expect(await fontSize(page, shellId)).toBe(15)
+    await page.keyboard.press('Control+=')
+    await expect.poll(() => fontSize(page, shellId)).toBe(16)
+    await page.keyboard.press('Control+-')
+    await page.keyboard.press('Control+-')
+    await expect.poll(() => fontSize(page, shellId)).toBe(14)
+    await page.keyboard.press('Control+0')
+    await expect.poll(() => fontSize(page, shellId)).toBe(15)
+
+    const host = page.locator('.term-host.active')
+    const before = await host.evaluate((el) => getComputedStyle(el).backgroundColor)
+    await page.getByRole('button', { name: 'Theme' }).click()
+    await page.getByRole('radio', { name: /Nord/ }).click()
+    await expect.poll(() => host.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before)
+    await expect(host).toHaveAttribute('data-term-background', '#2e3440')
+    await expect(page.locator('.note')).toHaveCount(0)
+    await page.getByRole('radio', { name: /Solarized Light/ }).click()
+    await expect(page.locator('.note')).toContainText('run /theme and pick light')
+    await page.screenshot({ path: join(SCREENS, '4-light-theme.png') })
+    await page.getByRole('radio', { name: /Grid Dark/ }).click()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.theme-picker')).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Close pane' }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog.getByRole('heading')).toHaveText('Close SMOKE?')
+    await expect(dialog).toContainText('This stops the Claude session SMOKE in Smoke. Its files stay on disk.')
+    await page.screenshot({ path: join(SCREENS, '5-close-confirm.png') })
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Close pane' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Close SMOKE' }).click()
+    await expect(page.locator('.pane')).toHaveCount(0)
+    await expect(page.locator('.empty h2')).toHaveText('No sessions yet')
+
+    await expect.poll(() => (readSettings(sandbox.userData).workspace?.panes?.length ?? -1)).toBe(0)
+    expect(readSettings(sandbox.userData).theme.id).toBe('grid-dark')
+  } finally {
+    await app.close()
+  }
+})
+
+test('opens panes from the quick pick with the keyboard and reopens them on the next start', async () => {
+  const sandbox = createSandbox()
+  const first = await launchApp(sandbox)
+  try {
+    await first.page.keyboard.press('Control+n')
+    await expect(first.page.getByRole('listbox', { name: 'Start a session in' })).toBeVisible()
+    await first.page.keyboard.type('smo')
+    await first.page.keyboard.press('Enter')
+    await expect(first.page.locator('.pane')).toHaveCount(1)
+    await expect(first.page.locator('.quickpick')).toHaveCount(0)
+    await first.page.keyboard.press('Control+n')
+    await expect(first.page.locator('.quickpick')).toHaveCount(1)
+    await first.page.keyboard.press('Enter')
+    await expect(first.page.locator('.pane')).toHaveCount(2)
+    await first.page.getByRole('button', { name: /New terminal in/ }).first().click()
+    await first.page.getByRole('menuitem', { name: 'Shell' }).click()
+    await expect(first.page.locator('.pane').first().locator('.tabs [role="tab"]')).toHaveCount(2)
+    await first.page.screenshot({ path: join(SCREENS, '6-two-panes.png') })
+    await expect.poll(() => (readSettings(sandbox.userData).workspace?.panes?.length ?? -1)).toBe(2)
+  } finally {
+    expect(await closeApp(first.app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+
+  const second = await launchApp(sandbox)
+  try {
+    await expect(second.page.locator('.pane')).toHaveCount(2)
+    await expect(second.page.locator('.pane').first().locator('.tabs [role="tab"]')).toHaveCount(2)
+    await second.page.screenshot({ path: join(SCREENS, '7-restored.png') })
+  } finally {
+    expect(await closeApp(second.app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
+test('projects view validates folders and confirms removal by name', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible()
+    await expect(page.locator('[data-project-id="gone"] .field-error')).toHaveText('This folder does not exist.')
+    await page.screenshot({ path: join(SCREENS, '8-projects.png') })
+
+    await page.getByRole('button', { name: 'Remove Missing' }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog.getByRole('heading')).toHaveText('Remove Missing?')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.locator('[data-project-id="gone"]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Remove Missing' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove Missing' }).click()
+    await expect(page.locator('[data-project-id="gone"]')).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
+test('names panes from Claude session files and lays three panes out with a wide bottom pane', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const add = page.getByRole('button', { name: NEW_IN_SMOKE })
+    await add.click()
+    await add.click()
+    await add.click()
+    await expect(page.locator('.pane')).toHaveCount(3)
+    const boxes = await page.locator('.pane').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))
+    expect(boxes[2].width).toBeGreaterThan(boxes[0].width * 1.8)
+    expect(boxes[2].top).toBeGreaterThan(boxes[0].bottom - 1)
+
+    const now = Date.now()
+    writeFileSync(
+      join(sandbox.sessionsDir, 'session.json'),
+      JSON.stringify({
+        pid: process.pid,
+        sessionId: 'abc',
+        cwd: sandbox.projectFolder,
+        name: 'User avatars',
+        nameSource: 'user',
+        status: 'busy',
+        startedAt: now + 1000,
+        updatedAt: now + 1000
+      }),
+      'utf8'
+    )
+    await expect(page.locator('.pane-title', { hasText: 'User avatars' })).toHaveCount(1, { timeout: 15_000 })
+    await expect(page.locator('.pane-fresh:visible')).toHaveCount(2)
+    await expect(page.locator('.status.busy')).toHaveCount(1)
+    await expect(page.locator('.topbar-count')).toContainText('1 busy')
+    await page.screenshot({ path: join(SCREENS, '9-three-panes-named.png') })
+  } finally {
+    await app.close()
+  }
+})
+
+test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex tabs', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.keyboard.press('Control+n')
+    await expect(page.locator('.quickpick')).toBeVisible()
+    await expect(page.locator('.quickpick .popover-foot')).toContainText('Tab switches agent')
+    await page.keyboard.type('smo')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('CClaude')
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await page.keyboard.press('Enter')
+
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.quickpick')).toHaveCount(0)
+    await expect(page.locator('.pane-header .agent-mark.codex')).toHaveText('X')
+    await expect(page.locator('.tabs .agent-mark.codex')).toHaveCount(1)
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['codex'])
+    const codexId = await activeTermId(page)
+    await expect.poll(() => bufferText(page, codexId), { timeout: 20_000 }).toContain('Smoke Project')
+
+    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await page.getByRole('menuitem', { name: 'Codex session' }).click()
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['codex', 'codex 2'])
+    await expect(page.locator('.tabs .agent-mark.codex')).toHaveCount(2)
+    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await page.getByRole('menuitem', { name: 'Claude session' }).click()
+    await expect(page.locator('.tabs .agent-mark.claude')).toHaveCount(1)
+    await expect(page.locator('.topbar-count')).toContainText('1 session')
+    await page.screenshot({ path: join(SCREENS, '10-codex-tabs.png') })
+
+    await page.keyboard.press('Control+Shift+N')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.quickpick')).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
+test('cycles Claude, Codex, Gemini with Tab, marks Gemini with G and stores a session id per tab', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.keyboard.press('Control+n')
+    await page.keyboard.type('smo')
+    const agent = page.locator('.quickpick .option.selected .option-agent')
+    await expect(agent).toHaveText('CClaude')
+    await page.keyboard.press('Tab')
+    await expect(agent).toHaveText('XCodex')
+    await page.keyboard.press('Tab')
+    await expect(agent).toHaveText('GGemini')
+    await page.keyboard.press('Tab')
+    await expect(agent).toHaveText('CClaude')
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Enter')
+
+    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveText('G')
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini'])
+    const first = await activeTermId(page)
+    await expect.poll(() => bufferText(page, first), { timeout: 20_000 }).toContain('Smoke Project')
+
+    await page.getByRole('button', { name: 'New terminal in SMOKE' }).click()
+    await page.getByRole('menuitem', { name: 'Gemini session' }).click()
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini', 'gemini 2'])
+    await expect(page.locator('.tabs .agent-mark.gemini')).toHaveCount(2)
+    await page.screenshot({ path: join(SCREENS, '12-gemini-tabs.png') })
+
+    await expect
+      .poll(() => (readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs ?? []).map((t: { sessionId?: string }) => t.sessionId))
+      .toEqual([expect.stringMatching(UUID), expect.stringMatching(UUID)])
+    const ids = readSettings(sandbox.userData).workspace.panes[0].tabs.map((t: { sessionId: string }) => t.sessionId)
+    expect(new Set(ids).size).toBe(2)
+
+    await page.keyboard.press('Control+Shift+N')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await page.keyboard.press('Escape')
+  } finally {
+    await app.close()
+  }
+})
+
+test('project default agent is set in the Projects view and used by the sidebar', async () => {
+  const sandbox = createSandbox()
+  const first = await launchApp(sandbox)
+  try {
+    await first.page.getByRole('button', { name: 'Projects', exact: true }).click()
+    const group = first.page.getByRole('radiogroup', { name: 'Default agent for Smoke' })
+    await expect(group.getByRole('radio', { name: 'Claude' })).toHaveAttribute('aria-checked', 'true')
+    await expect(group.getByRole('radio')).toHaveText(['Claude', 'Codex', 'Gemini'])
+    await group.getByRole('radio', { name: 'Codex' }).click()
+    await expect(group.getByRole('radio', { name: 'Codex' })).toHaveAttribute('aria-checked', 'true')
+    await expect.poll(() => readSettings(sandbox.userData).projects[0].defaultAgent).toBe('codex')
+    await first.page.screenshot({ path: join(SCREENS, '11-default-agent.png') })
+
+    await first.page.getByRole('button', { name: 'Projects', exact: true }).click()
+    await first.page.getByRole('button', { name: 'New Codex session in Smoke' }).click()
+    await expect(first.page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
+    await first.page.getByRole('button', { name: 'Choose agent for Smoke' }).click()
+    await first.page.getByRole('menuitem', { name: 'Claude session' }).click()
+    await expect(first.page.locator('.pane')).toHaveCount(2)
+    await expect(first.page.locator('.pane-header .agent-mark.claude')).toHaveCount(1)
+    await expect(first.page.locator('.sess-row .agent-mark')).toHaveCount(2)
+    await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.length ?? -1).toBe(2)
+    expect(readSettings(sandbox.userData).workspace.panes[0].tabs[0].agent).toBe('codex')
+  } finally {
+    expect(await closeApp(first.app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+
+  const second = await launchApp(sandbox)
+  try {
+    await expect(second.page.locator('.pane')).toHaveCount(2)
+    await expect(second.page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
+    await expect(second.page.locator('.pane-header .agent-mark.claude')).toHaveCount(1)
+  } finally {
+    expect(await closeApp(second.app)).toBeLessThan(QUIT_BUDGET_MS)
+  }
+})
+
+test('names and status of a Codex pane come from Codex rollout files', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    await page.keyboard.press('Control+Shift+N')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await page.keyboard.type('smo')
+    await page.keyboard.press('Enter')
+    await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
+    await expect(page.locator('.pane-fresh')).toBeVisible()
+
+    const id = '019aaaaa-0000-7000-8000-0000000000aa'
+    const dir = join(sandbox.codexHome, 'sessions', '2026', '10', '08')
+    mkdirSync(dir, { recursive: true })
+    const meta = {
+      type: 'session_meta',
+      payload: { id, cwd: sandbox.projectFolder, timestamp: new Date(Date.now() + 1000).toISOString() }
+    }
+    const started = { type: 'event_msg', payload: { type: 'task_started' } }
+    writeFileSync(
+      join(dir, `rollout-2026-10-08T12-00-00-${id}.jsonl`),
+      [meta, started].map((line) => JSON.stringify(line)).join('\n') + '\n',
+      'utf8'
+    )
+    writeFileSync(
+      join(sandbox.codexHome, 'session_index.jsonl'),
+      JSON.stringify({ id, thread_name: 'Fix the invoice report', updated_at: new Date().toISOString() }) + '\n',
+      'utf8'
+    )
+    await expect(page.locator('.pane-title', { hasText: 'Fix the invoice report' })).toHaveCount(1, { timeout: 15_000 })
+    await expect(page.locator('.status.busy')).toHaveCount(1)
+    await expect(page.locator('.topbar-count')).toContainText('1 busy')
+    await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.[0]?.tabs?.[0]?.sessionId).toBe(id)
+  } finally {
+    await app.close()
+  }
+})

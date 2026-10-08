@@ -1,0 +1,175 @@
+import { defaultSettings } from '../shared/settingsSchema'
+import type { AgentPreset } from '../shared/quickPick'
+import type { AgentsReport, ToolReport } from '../shared/agentTools'
+import type { Attention } from '../shared/attention'
+import type { OpsSnapshot } from '../shared/opsFeed'
+import type {
+  AgentKind,
+  AppInfo,
+  CodexSession,
+  GeminiSession,
+  GitChanges,
+  Project,
+  SessionFile,
+  Settings,
+  StatusInfo,
+  TabAgent
+} from '../shared/types'
+
+export interface TermState {
+  id: string
+  agent: TabAgent
+  label: string
+  sessionId?: string
+  pid?: number
+  startedAt: number
+  status: 'starting' | 'running' | 'exited'
+  exitCode?: number
+  resumed?: boolean
+  retried?: boolean
+  agentsOpen?: boolean
+  command?: string
+  task?: { agents: AgentKind[]; before: ToolReport[] }
+}
+
+export interface PaneState {
+  id: string
+  projectId: string
+  tabs: TermState[]
+  activeTabId: string
+  fontSize: number
+}
+
+export type View = 'grid' | 'projects' | 'agents'
+
+export interface AgentsState {
+  report: AgentsReport | null
+  checking: boolean
+}
+
+export const AGENTS_PROJECT_ID = '__agents__'
+
+export interface BridgeState {
+  installed: boolean
+  busy: boolean
+  error: string | null
+  note: string | null
+}
+
+export interface AppState {
+  ready: boolean
+  settings: Settings
+  panes: PaneState[]
+  focusedId: string | null
+  maximizedId: string | null
+  view: View
+  sessions: SessionFile[]
+  codexSessions: CodexSession[]
+  geminiSessions: GeminiSession[]
+  branches: Record<string, string | null>
+  statusInfo: Record<string, StatusInfo>
+  opsInfo: Record<string, OpsSnapshot>
+  detailsPaneId: string | null
+  gitChanges: Record<string, GitChanges | null>
+  attention: Record<string, Attention>
+  waiting: Record<string, boolean>
+  bridge: BridgeState
+  agents: AgentsState
+  windowFocused: boolean
+  now: number
+  sidebarOverride: boolean | null
+  collapsedProjects: Record<string, boolean>
+  quickPickOpen: boolean
+  quickPickPreset: AgentPreset
+  themePickerOpen: boolean
+  info: AppInfo
+}
+
+export const initialState = (): AppState => ({
+  ready: false,
+  settings: defaultSettings(),
+  panes: [],
+  focusedId: null,
+  maximizedId: null,
+  view: 'grid',
+  sessions: [],
+  codexSessions: [],
+  geminiSessions: [],
+  branches: {},
+  statusInfo: {},
+  opsInfo: {},
+  detailsPaneId: null,
+  gitChanges: {},
+  attention: {},
+  waiting: {},
+  bridge: { installed: false, busy: false, error: null, note: null },
+  agents: { report: null, checking: false },
+  windowFocused: true,
+  now: Date.now(),
+  sidebarOverride: null,
+  collapsedProjects: {},
+  quickPickOpen: false,
+  quickPickPreset: 'default',
+  themePickerOpen: false,
+  info: { claudeCommand: 'claude.exe', codexCommand: 'codex', geminiCommand: 'gemini', shellCommand: 'powershell.exe', home: '', userData: '' }
+})
+
+type Listener = (state: AppState) => void
+
+class Store {
+  private current: AppState = initialState()
+  private readonly listeners = new Set<Listener>()
+  private scheduled = false
+
+  get state(): AppState {
+    return this.current
+  }
+
+  set(update: (state: AppState) => AppState): void {
+    this.current = update(this.current)
+    if (this.scheduled) return
+    this.scheduled = true
+    requestAnimationFrame(() => {
+      this.scheduled = false
+      for (const listener of this.listeners) listener(this.current)
+    })
+  }
+
+  patch(partial: Partial<AppState>): void {
+    this.set((state) => ({ ...state, ...partial }))
+  }
+
+  subscribe(listener: Listener): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+}
+
+export const store = new Store()
+
+export const projectById = (state: AppState, id: string): Project | undefined =>
+  state.settings.projects.find((p) => p.id === id) ??
+  (id === AGENTS_PROJECT_ID ? { id, name: 'Agents', folder: state.info.home, defaultAgent: 'claude' } : undefined)
+
+export const paneById = (state: AppState, id: string | null): PaneState | undefined =>
+  id ? state.panes.find((p) => p.id === id) : undefined
+
+export const mapPane = (state: AppState, id: string, change: (pane: PaneState) => PaneState): AppState => ({
+  ...state,
+  panes: state.panes.map((pane) => (pane.id === id ? change(pane) : pane))
+})
+
+export const mapTerm = (
+  state: AppState,
+  termId: string,
+  change: (term: TermState) => TermState
+): AppState => ({
+  ...state,
+  panes: state.panes.map((pane) =>
+    pane.tabs.some((t) => t.id === termId)
+      ? { ...pane, tabs: pane.tabs.map((t) => (t.id === termId ? change(t) : t)) }
+      : pane
+  )
+})
+
+export const newId = (): string => crypto.randomUUID()

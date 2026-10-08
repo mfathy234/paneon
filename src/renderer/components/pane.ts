@@ -1,0 +1,302 @@
+import {
+  addTab,
+  closeDetails,
+  closePane,
+  closeTerminal,
+  focusPane,
+  focusRelative,
+  openDetails,
+  openPaneFolder,
+  restartTab,
+  setActiveTab,
+  showPaneDiff,
+  toggleAgents,
+  toggleDetails,
+  toggleMaximize
+} from '../actions'
+import type { PaneView } from '../derive'
+import { clear, h, icon, iconButton } from '../dom'
+import { sessionLabel } from '../../shared/agents'
+import type { TabAgent } from '../../shared/types'
+import { AgentsDrawer } from './agentsDrawer'
+import { buildDetails } from './opsDetails'
+import { paneInfoStrip } from './paneInfo'
+import { ICONS } from '../icons'
+import { agentMark } from './agentMark'
+import { ensureTerminal } from '../terminals'
+
+export class PaneComponent {
+  readonly el: HTMLElement
+  private readonly mark = h('span', { class: 'slot' })
+  private readonly index = h('span', { class: 'pane-title' })
+  private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
+  private readonly branch = h('span', { class: 'chip', hidden: true })
+  private readonly branchName = h('span', { class: 'chip-text' })
+  private readonly statusWord = h('span', { class: 'status' })
+  private readonly attentionWord = h('span', { class: 'attention-word', hidden: true })
+  private readonly info = h('div', { class: 'pane-info', hidden: true })
+  private infoSignature = ''
+  private readonly drawer = new AgentsDrawer()
+  private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
+  private detailsSignature = ''
+  private actionsMenu: HTMLElement | null = null
+  private readonly restart = h('button', { class: 'btn small', type: 'button' }, 'Restart')
+  private readonly maxButton = h('span', { class: 'slot' })
+  private readonly tabs = h('div', { class: 'tabs', role: 'tablist' })
+  private readonly body = h('div', { class: 'pane-body' })
+  private tabSignature = ''
+  private menu: HTMLElement | null = null
+  private current: PaneView | null = null
+  private lastActiveTab = ''
+
+  constructor(readonly paneId: string) {
+    this.branch.append(icon(ICONS.branch), this.branchName)
+    const header = h(
+      'div',
+      { class: 'pane-header' },
+      this.mark,
+      this.index,
+      this.fresh,
+      this.branch,
+      this.statusWord,
+      this.attentionWord,
+      this.restart,
+      h('span', { class: 'spacer' }),
+      iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
+      iconButton('Previous pane', ICONS.prev, () => focusRelative(-1)),
+      iconButton('Next pane', ICONS.next, () => focusRelative(1)),
+      this.maxButton,
+      iconButton('Close pane', ICONS.close, () => void closePane(paneId), 'close-pane')
+    )
+    header.addEventListener('dblclick', (event) => {
+      if ((event.target as HTMLElement).closest('button')) return
+      toggleMaximize(paneId)
+    })
+    this.restart.addEventListener('click', () => {
+      const view = this.current
+      if (view) void restartTab(paneId, view.tabs.find((t) => t.active)?.id ?? view.pane.activeTabId)
+    })
+    this.info.addEventListener('click', (event) => {
+      if (!this.el.classList.contains('maximized') || (event.target as HTMLElement).closest('button')) return
+      toggleDetails(paneId)
+    })
+    const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
+    const content = h('div', { class: 'pane-content' }, work, this.details)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.info, this.drawer.el, content)
+    this.el.addEventListener('pointerdown', () => focusPane(paneId), true)
+  }
+
+  update(view: PaneView, focused: boolean, maximized: boolean): void {
+    this.current = view
+    const title = view.title
+    this.index.textContent = `${view.index + 1} · ${title}`
+    this.updateMark(view.agent)
+    this.fresh.hidden = view.named
+    this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
+    this.el.classList.toggle('focused', focused)
+    this.el.classList.toggle('maximized', maximized)
+    this.branch.hidden = !view.branch
+    this.branchName.textContent = view.branch ?? ''
+    this.statusWord.textContent = view.status
+    this.statusWord.className = `status ${view.status}`
+    this.updateAttention(view)
+    this.updateInfo(view, maximized)
+    this.drawer.update(view.opsLive ? view.snapshot : null, view.agentsOpen, view.title.toUpperCase(), view.now)
+    this.updateDetails(view, maximized)
+    this.restart.hidden = !view.activeExited
+    this.updateMaximizeButton(maximized)
+    this.updateTabs(view)
+    this.updateTerminals(view)
+    if (focused && this.lastActiveTab && this.lastActiveTab !== view.pane.activeTabId) {
+      ensureTerminal(view.pane.activeTabId, view.pane.fontSize).focus()
+    }
+    this.lastActiveTab = view.pane.activeTabId
+  }
+
+  private updateAttention(view: PaneView): void {
+    const word = view.attention === 'needs' ? 'needs you' : view.attention === 'done' ? 'done' : ''
+    this.attentionWord.hidden = word === ''
+    this.attentionWord.textContent = word
+    this.attentionWord.className = `attention-word ${view.attention}`
+    this.el.classList.toggle('attention', view.attention !== 'none')
+    this.el.dataset.attention = view.attention
+  }
+
+  private updateInfo(view: PaneView, maximized: boolean): void {
+    this.info.classList.toggle('clickable', maximized)
+    const signature = JSON.stringify([view.info, view.title])
+    if (signature === this.infoSignature) return
+    this.infoSignature = signature
+    const items = paneInfoStrip(view.info, {
+      title: view.title.toUpperCase(),
+      onToggleAgents: () => {
+        const tabId = view.primaryTabId
+        toggleAgents(tabId)
+      }
+    })
+    this.info.hidden = items.length === 0
+    this.info.replaceChildren(...items)
+  }
+
+  private updateDetails(view: PaneView, maximized: boolean): void {
+    const open = maximized && view.detailsOpen
+    this.details.hidden = !open
+    this.el.classList.toggle('with-details', open)
+    if (!open) {
+      this.detailsSignature = ''
+      return
+    }
+    const children = buildDetails(view, view.now, () => closeDetails())
+    const signature = children.map((c) => c.outerHTML).join('')
+    if (signature === this.detailsSignature) return
+    this.detailsSignature = signature
+    this.details.replaceChildren(...children)
+  }
+
+  private toggleActions(): void {
+    if (this.actionsMenu) return this.closeActions()
+    const run = (action: () => unknown): void => {
+      this.closeActions()
+      void action()
+    }
+    const item = (text: string, action: () => unknown): HTMLElement =>
+      h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => run(action) }, text)
+    const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'))
+    const showDetails = item('Details', () => openDetails(this.paneId))
+    this.actionsMenu = h(
+      'div',
+      { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
+      first,
+      item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer')),
+      item('Open terminal here', () => addTab(this.paneId, 'shell')),
+      item('Show diff', () => showPaneDiff(this.paneId)),
+      showDetails
+    )
+    this.actionsMenu.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      this.closeActions()
+    })
+    this.el.append(this.actionsMenu)
+    first.focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
+  }
+
+  private readonly outsideActions = (event: Event): void => {
+    const target = event.target as HTMLElement
+    if (this.actionsMenu && !this.actionsMenu.contains(target) && !target.closest('.pane-actions')) this.closeActions()
+  }
+
+  private closeActions(): void {
+    document.removeEventListener('pointerdown', this.outsideActions, true)
+    this.actionsMenu?.remove()
+    this.actionsMenu = null
+  }
+
+  private markAgent = ''
+
+  private updateMark(agent: TabAgent): void {
+    if (this.markAgent === agent) return
+    this.markAgent = agent
+    clear(this.mark)
+    const mark = agentMark(agent)
+    if (mark) this.mark.append(mark)
+  }
+
+  private updateMaximizeButton(maximized: boolean): void {
+    const label = maximized ? 'Restore pane to grid' : 'Maximize pane'
+    const existing = this.maxButton.firstElementChild
+    if (existing?.getAttribute('aria-label') === label) return
+    clear(this.maxButton)
+    this.maxButton.append(
+      iconButton(label, maximized ? ICONS.restore : ICONS.maximize, () => toggleMaximize(this.paneId), 'maximize')
+    )
+  }
+
+  private updateTabs(view: PaneView): void {
+    const signature = JSON.stringify(view.tabs)
+    if (signature === this.tabSignature) return
+    this.tabSignature = signature
+    this.closeMenu()
+    this.tabs.setAttribute('aria-label', `Terminals in ${view.title.toUpperCase()}`)
+    clear(this.tabs)
+    for (const tab of view.tabs) this.tabs.append(this.buildTab(view, tab))
+    const add = iconButton(
+      `New terminal in ${view.title.toUpperCase()}`,
+      ICONS.plus,
+      () => this.toggleMenu(add),
+      'tab-add'
+    )
+    add.setAttribute('aria-haspopup', 'menu')
+    this.tabs.append(h('div', { class: 'tab-add-slot' }, add))
+  }
+
+  private buildTab(view: PaneView, tab: PaneView['tabs'][number]): HTMLElement {
+    const label = h(
+      'button',
+      {
+        class: 'tab-label',
+        type: 'button',
+        role: 'tab',
+        'aria-selected': tab.active ? 'true' : 'false',
+        onClick: () => setActiveTab(this.paneId, tab.id)
+      },
+      tab.label
+    )
+    label.title = `${sessionLabel(tab.agent)}: ${tab.label}`
+    const wrapper = h('div', { class: `tab${tab.active ? ' active' : ''}${tab.exited ? ' exited' : ''}` }, agentMark(tab.agent), label)
+    if (tab.active) {
+      wrapper.append(
+        iconButton(`Close terminal ${tab.label}`, ICONS.closeSmall, () => void closeTerminal(this.paneId, tab.id), 'tab-close')
+      )
+    }
+    return wrapper
+  }
+
+  private updateTerminals(view: PaneView): void {
+    for (const tab of view.pane.tabs) {
+      const terminal = ensureTerminal(tab.id, view.pane.fontSize)
+      terminal.mount(this.body)
+      terminal.setFontSize(view.pane.fontSize)
+      terminal.setVisible(tab.id === view.pane.activeTabId)
+    }
+  }
+
+  private toggleMenu(anchor: HTMLElement): void {
+    if (this.menu) return this.closeMenu()
+    const choose = (agent: TabAgent): void => {
+      this.closeMenu()
+      void addTab(this.paneId, agent)
+    }
+    const item = (text: string, agent: TabAgent): HTMLElement =>
+      h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), text)
+    const first = item('Claude session', 'claude')
+    this.menu = h('div', { class: 'popover menu', role: 'menu' }, first, item('Codex session', 'codex'), item('Gemini session', 'gemini'), item('Shell', 'shell'))
+    this.menu.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        this.closeMenu()
+        anchor.focus()
+      }
+    })
+    this.tabs.append(this.menu)
+    first.focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
+  }
+
+  private readonly outside = (event: Event): void => {
+    if (this.menu && !this.menu.contains(event.target as Node)) this.closeMenu()
+  }
+
+  private closeMenu(): void {
+    document.removeEventListener('pointerdown', this.outside, true)
+    this.menu?.remove()
+    this.menu = null
+  }
+
+  dispose(): void {
+    this.closeMenu()
+    this.closeActions()
+    this.el.remove()
+  }
+}

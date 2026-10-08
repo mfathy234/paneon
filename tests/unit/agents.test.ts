@@ -1,0 +1,147 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it } from 'vitest'
+import { agentLabel, agentOf, nextAgent, sessionLabel } from '../../src/shared/agents'
+import { agentArgs, launchSpec, locateCodexBinary, locateGeminiEntry, shellArgs } from '../../src/main/agentLaunch'
+import type { SpawnRequest } from '../../src/shared/types'
+
+const request = (patch: Partial<SpawnRequest>): SpawnRequest => ({
+  id: 't',
+  agent: 'codex',
+  cwd: process.cwd(),
+  resume: false,
+  cols: 80,
+  rows: 24,
+  ...patch
+})
+
+describe('agent helpers', () => {
+  it('resolves a project default and falls back to claude', () => {
+    expect(agentOf({ defaultAgent: 'codex' })).toBe('codex')
+    expect(agentOf({ defaultAgent: 'claude' })).toBe('claude')
+    expect(agentOf(undefined)).toBe('claude')
+    expect(agentOf({ defaultAgent: 'gemini' })).toBe('gemini')
+    expect(nextAgent('claude')).toBe('codex')
+    expect(nextAgent('codex')).toBe('gemini')
+    expect(nextAgent('gemini')).toBe('claude')
+  })
+
+  it('labels agents', () => {
+    expect(agentLabel('claude')).toBe('Claude Code')
+    expect(sessionLabel('codex')).toBe('Codex session')
+    expect(sessionLabel('gemini')).toBe('Gemini session')
+    expect(agentLabel('gemini')).toBe('Gemini')
+    expect(sessionLabel('shell')).toBe('Shell')
+  })
+})
+
+describe('agentArgs', () => {
+  it('claude continues, codex resumes a specific session id, never a bare resume', () => {
+    expect(agentArgs({ agent: 'claude', resume: true }, false)).toEqual(['--continue'])
+    expect(agentArgs({ agent: 'codex', resume: true, sessionId: 'abc' }, false)).toEqual(['resume', 'abc'])
+    expect(agentArgs({ agent: 'codex', resume: true }, false)).toEqual([])
+    expect(agentArgs({ agent: 'claude', resume: true, sessionId: 'abc' }, false)).toEqual(['-r', 'abc'])
+    expect(agentArgs({ agent: 'codex', resume: false, sessionId: 'abc' }, false)).toEqual([])
+  })
+
+  it('gemini starts with a chosen session id and resumes exactly that id, never latest', () => {
+    expect(agentArgs({ agent: 'gemini', resume: false, sessionId: 'u-1' }, false)).toEqual(['--session-id', 'u-1'])
+    expect(agentArgs({ agent: 'gemini', resume: true, sessionId: 'u-1' }, false)).toEqual(['--resume', 'u-1'])
+    expect(agentArgs({ agent: 'gemini', resume: true }, false)).toEqual([])
+    expect(agentArgs({ agent: 'gemini', resume: false, sessionId: 'u-1' }, true)).toEqual([])
+  })
+
+  it('adds nothing when the command is overridden', () => {
+    expect(agentArgs({ agent: 'claude', resume: true }, true)).toEqual([])
+    expect(agentArgs({ agent: 'codex', resume: true, sessionId: 'abc' }, true)).toEqual([])
+  })
+})
+
+describe('locateCodexBinary', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cg-npm-'))
+  const vendor = ['@openai', 'codex-win32-x64', 'vendor', 'x86_64-pc-windows-msvc', 'bin']
+
+  it('finds the native binary under the npm package next to codex.cmd', () => {
+    const dir = join(root, 'nested')
+    const bin = join(dir, 'node_modules', '@openai', 'codex', 'node_modules', ...vendor)
+    mkdirSync(bin, { recursive: true })
+    writeFileSync(join(dir, 'codex.cmd'), '', 'utf8')
+    writeFileSync(join(bin, 'codex.exe'), '', 'utf8')
+    expect(locateCodexBinary(['C:\\nowhere', dir])).toBe(join(bin, 'codex.exe'))
+  })
+
+  it('finds a hoisted layout and returns null when nothing matches', () => {
+    const dir = join(root, 'hoisted')
+    const bin = join(dir, 'node_modules', ...vendor)
+    mkdirSync(bin, { recursive: true })
+    writeFileSync(join(dir, 'codex.cmd'), '', 'utf8')
+    writeFileSync(join(bin, 'codex.exe'), '', 'utf8')
+    expect(locateCodexBinary([dir])).toBe(join(bin, 'codex.exe'))
+    expect(locateCodexBinary([join(root, 'empty')])).toBeNull()
+  })
+})
+
+describe('locateGeminiEntry', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cg-gemini-'))
+
+  it('runs the bundled entry with node.exe next to gemini.cmd, else node from PATH', () => {
+    const dir = join(root, 'npm')
+    const bundle = join(dir, 'node_modules', '@google', 'gemini-cli', 'bundle')
+    mkdirSync(bundle, { recursive: true })
+    writeFileSync(join(dir, 'gemini.cmd'), '', 'utf8')
+    writeFileSync(join(bundle, 'gemini.js'), '', 'utf8')
+    writeFileSync(join(dir, 'node.exe'), '', 'utf8')
+    expect(locateGeminiEntry(['C:\\nowhere', dir])).toEqual({
+      file: join(dir, 'node.exe'),
+      args: [join(bundle, 'gemini.js')]
+    })
+    expect(locateGeminiEntry([join(root, 'empty')])).toBeNull()
+  })
+})
+
+describe('launchSpec', () => {
+  const saved = { ...process.env }
+  afterEach(() => {
+    process.env = { ...saved }
+  })
+
+  it('uses PANEON_CODEX_COMMAND for codex without resume args', () => {
+    process.env.PANEON_CODEX_COMMAND = process.execPath
+    const spec = launchSpec(request({ resume: true, sessionId: 'abc' }))
+    expect(spec).toEqual({ file: process.execPath, args: [] })
+  })
+
+  it('keeps the claude and codex overrides independent', () => {
+    process.env.PANEON_CLAUDE_COMMAND = process.execPath
+    process.env.PANEON_CODEX_COMMAND = 'C:\\definitely\\missing\\codex.exe'
+    expect(launchSpec(request({ agent: 'claude', resume: true }))).toEqual({ file: process.execPath, args: [] })
+    expect(launchSpec(request({ agent: 'codex' }))).toContain('Could not find')
+  })
+
+  it('uses PANEON_GEMINI_COMMAND for gemini without session args and reports a missing one', () => {
+    process.env.PANEON_GEMINI_COMMAND = process.execPath
+    expect(launchSpec(request({ agent: 'gemini', sessionId: 'u-1' }))).toEqual({ file: process.execPath, args: [] })
+    process.env.PANEON_GEMINI_COMMAND = 'C:\\definitely\\missing\\gemini.exe'
+    expect(launchSpec(request({ agent: 'gemini' }))).toContain('Could not find')
+  })
+
+  it('splits PANEON_CODEX_ARGS', () => {
+    process.env.PANEON_CODEX_COMMAND = process.execPath
+    process.env.PANEON_CODEX_ARGS = '["--flag","two words"]'
+    expect(launchSpec(request({}))).toEqual({ file: process.execPath, args: ['--flag', 'two words'] })
+  })
+})
+
+describe('shellArgs', () => {
+  it('opens a plain interactive shell without a command', () => {
+    delete process.env.PANEON_SHELL
+    expect(shellArgs('pwsh.exe')).toEqual(['-NoLogo'])
+  })
+
+  it('runs a one-shot command with the right switches per shell', () => {
+    expect(shellArgs('pwsh.exe', 'npm -v')).toEqual(['-NoLogo', '-Command', 'npm -v'])
+    expect(shellArgs('cmd.exe', 'npm -v')).toEqual(['/d', '/s', '/c', 'npm -v'])
+    expect(shellArgs(['C:', 'Windows', 'System32', 'cmd.exe'].join(String.fromCharCode(92)), 'npm -v')[0]).toBe('/d')
+  })
+})

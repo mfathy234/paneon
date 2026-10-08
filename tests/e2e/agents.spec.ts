@@ -1,0 +1,74 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { delimiter, join } from 'node:path'
+import { expect, test } from '@playwright/test'
+import { createFakeTools } from '../support/fakeTools'
+import { closeApp, createSandbox, launchApp } from './helpers'
+
+function fakeEnv(installed: Parameters<typeof createFakeTools>[1]) {
+  const dir = mkdtempSync(join(tmpdir(), 'paneon-fake-'))
+  const tools = createFakeTools(dir, installed, { claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' })
+  const env = {
+    PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
+    PANEON_CLAUDE_COMMAND: tools.commands.claude,
+    PANEON_CODEX_COMMAND: tools.commands.codex,
+    PANEON_GEMINI_COMMAND: tools.commands.gemini
+  }
+  return { tools, env }
+}
+
+const row = (page: import('@playwright/test').Page, agent: string) => page.locator(`.tool-block[data-agent="${agent}"]`)
+
+test('Agents view shows versions, installs and updates in a visible tab and re-checks', async () => {
+  const { env } = fakeEnv({ claude: '2.1.294', codex: '0.156.1', gemini: null })
+  const { app, page } = await launchApp(createSandbox(), env)
+  try {
+    await expect(page.locator('#agents-button .update-dot')).toBeVisible()
+    await page.getByRole('button', { name: /^Agents/ }).click()
+    await expect(page.locator('.agents-view')).toBeVisible()
+
+    await expect(row(page, 'claude').locator('.tool-status')).toContainText('Installed 2.1.294')
+    await expect(row(page, 'claude').locator('.tool-status')).toContainText('Latest 2.1.301')
+    await expect(row(page, 'claude').locator('.tool-flag.update')).toHaveText('update available')
+    await expect(row(page, 'codex').locator('.tool-flag.current')).toHaveText('up to date')
+    await expect(row(page, 'codex').getByRole('button', { name: 'Up to date' })).toBeDisabled()
+    await expect(row(page, 'gemini').locator('.tool-status')).toContainText('Not installed')
+    await expect(page.locator('#agents-update-all')).toBeEnabled()
+
+    await row(page, 'gemini').getByRole('button', { name: 'Show command' }).click()
+    await expect(row(page, 'gemini').locator('.tool-command')).toHaveText('npm install -g @google/gemini-cli@latest')
+    await row(page, 'gemini').getByRole('button', { name: 'Hide command' }).click()
+
+    await row(page, 'gemini').getByRole('button', { name: 'Install Gemini CLI' }).click()
+    await expect(page.locator('.pane-title')).toHaveText('1 · Agents')
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini'])
+    await expect(page.locator('.toast.info')).toContainText('Gemini CLI 0.9.1 installed.', { timeout: 30_000 })
+
+    await page.getByRole('button', { name: /^Agents/ }).click()
+    await expect(row(page, 'gemini').locator('.tool-flag.current')).toBeVisible()
+
+    await page.locator('#agents-update-all').click()
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini', 'update claude'])
+    await expect(page.locator('.toast.info').last()).toContainText('Claude Code updated to 2.1.301.', { timeout: 30_000 })
+    await page.getByRole('button', { name: /^Agents/ }).click()
+    await expect(row(page, 'claude').locator('.tool-flag.current')).toBeVisible()
+    await expect(page.locator('#agents-update-all')).toBeDisabled()
+    await expect(page.locator('#agents-button .update-dot')).toBeHidden()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('a failed install reports the exit code and keeps the tab', async () => {
+  const { tools, env } = fakeEnv({ claude: '2.1.301', codex: '0.156.1', gemini: null })
+  tools.failInstalls()
+  const { app, page } = await launchApp(createSandbox(), env)
+  try {
+    await page.getByRole('button', { name: /^Agents/ }).click()
+    await row(page, 'gemini').getByRole('button', { name: 'Install Gemini CLI' }).click()
+    await expect(page.locator('.toast.error')).toContainText('Gemini CLI was not installed (exit code 1)', { timeout: 30_000 })
+    await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini'])
+  } finally {
+    await closeApp(app)
+  }
+})

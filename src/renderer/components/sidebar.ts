@@ -1,0 +1,272 @@
+import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
+import { filterProjects } from '../../shared/quickPick'
+import { formatAge } from '../../shared/statusLine'
+import type { AgentKind, Project, ResumeEntry } from '../../shared/types'
+import { api } from '../api'
+import { focusPane, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
+import type { PaneView } from '../derive'
+import { clear, h, icon, iconButton } from '../dom'
+import { ICONS } from '../icons'
+import { agentMark } from './agentMark'
+import type { AppState } from '../state'
+
+const MAX_RESUME = 15
+
+export function isSidebarCollapsed(state: AppState): boolean {
+  const maximized = state.view === 'grid' && state.maximizedId !== null
+  return state.sidebarOverride ?? (maximized || state.settings.sidebarCollapsed)
+}
+
+export class SidebarComponent {
+  readonly el = h('aside', { class: 'sidebar', 'aria-label': 'Projects' })
+  private readonly filter = h('input', {
+    id: 'project-filter',
+    class: 'text-input',
+    type: 'text',
+    placeholder: 'Filter projects',
+    autocomplete: 'off'
+  })
+  private readonly list = h('div', { class: 'proj-list' })
+  private signature = ''
+  private filterText = ''
+
+  constructor() {
+    this.filter.addEventListener('input', () => {
+      this.filterText = this.filter.value
+      this.signature = ''
+      this.render(this.lastState, this.lastViews)
+    })
+  }
+
+  private lastState: AppState | null = null
+  private lastViews: PaneView[] = []
+
+  update(state: AppState, views: PaneView[]): void {
+    this.lastState = state
+    this.lastViews = views
+    this.render(state, views)
+  }
+
+  private render(state: AppState | null, views: PaneView[]): void {
+    if (!state) return
+    const collapsed = isSidebarCollapsed(state)
+    const focusedView = views.find((v) => v.pane.id === state.focusedId)
+    const projects = filterProjects(state.settings.projects, this.filterText)
+    const signature = JSON.stringify([
+      collapsed,
+      state.view,
+      focusedView?.pane.projectId,
+      state.focusedId,
+      projects.map((p) => [p.id, p.name, p.defaultAgent]),
+      state.collapsedProjects,
+      views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent])
+    ])
+    if (signature === this.signature) return
+    this.signature = signature
+    this.el.classList.toggle('rail', collapsed)
+    this.el.setAttribute('aria-label', collapsed ? 'Projects (collapsed)' : 'Projects')
+    if (collapsed) this.renderRail(state, projects, focusedView?.pane.projectId)
+    else this.renderFull(state, projects, views)
+  }
+
+  private renderRail(state: AppState, projects: AppState['settings']['projects'], activeProject?: string): void {
+    clear(this.el)
+    this.el.append(
+      iconButton('Expand sidebar', ICONS.expand, () => toggleSidebar(), 'rail-btn'),
+      h('div', { class: 'rail-divider' })
+    )
+    for (const project of projects) {
+      const button = iconButton(project.name, ICONS.folderLarge, () => void startSession(project.id), 'rail-btn')
+      button.classList.toggle('selected', project.id === activeProject)
+      this.el.append(button)
+    }
+    void state
+  }
+
+  private renderFull(state: AppState, projects: AppState['settings']['projects'], views: PaneView[]): void {
+    const hadFocus = document.activeElement === this.filter
+    clear(this.el)
+    clear(this.list)
+    for (const project of projects) this.list.append(...this.projectRows(state, project, views))
+    if (projects.length === 0) {
+      this.list.append(
+        h('p', { class: 'proj-empty' }, state.settings.projects.length === 0 ? 'No projects yet.' : 'No project matches.')
+      )
+    }
+    this.el.append(
+      h(
+        'div',
+        { class: 'sidebar-head' },
+        h('span', { class: 'sidebar-title' }, 'Projects'),
+        iconButton('Collapse sidebar', ICONS.collapse, () => toggleSidebar())
+      ),
+      h(
+        'div',
+        { class: 'filter' },
+        h('label', { for: 'project-filter', class: 'sr-only' }, 'Filter projects'),
+        icon(ICONS.search),
+        this.filter
+      ),
+      this.list,
+      h(
+        'div',
+        { class: 'sidebar-foot' },
+        h(
+          'button',
+          {
+            class: 'link',
+            type: 'button',
+            'aria-current': state.view === 'projects' ? 'page' : undefined,
+            onClick: () => showView('projects')
+          },
+          'Manage projects'
+        )
+      )
+    )
+    if (hadFocus) this.filter.focus()
+  }
+
+  private projectRows(state: AppState, project: AppState['settings']['projects'][number], views: PaneView[]): HTMLElement[] {
+    const own = views.filter((v) => v.pane.projectId === project.id)
+    const collapsed = state.collapsedProjects[project.id] === true
+    const toggle = h(
+      'button',
+      {
+        class: 'proj-icon',
+        type: 'button',
+        'aria-label': `${collapsed ? 'Expand' : 'Collapse'} ${project.name}`,
+        'aria-expanded': own.length > 0 ? String(!collapsed) : undefined,
+        onClick: () => toggleProjectExpanded(project.id)
+      },
+      icon(ICONS.folder)
+    )
+    const row = h(
+      'div',
+      { class: 'proj-row' },
+      toggle,
+      h('button', { class: 'proj-name', type: 'button', title: project.folder, onClick: () => void startSession(project.id) }, project.name),
+      h('span', { class: 'proj-count' }, own.length > 0 ? String(own.length) : ''),
+      iconButton(
+        `New ${AGENT_NAMES[agentOf(project)]} session in ${project.name}`,
+        ICONS.plus,
+        () => void startSession(project.id),
+        'small'
+      ),
+      this.agentMenuButton(project)
+    )
+    const rows: HTMLElement[] = [row]
+    if (collapsed) return rows
+    for (const view of own) {
+      const selected = view.pane.id === state.focusedId
+      rows.push(
+        h(
+          'button',
+          {
+            class: `sess-row${selected ? ' selected' : ''}`,
+            type: 'button',
+            'aria-current': selected ? 'true' : undefined,
+            onClick: () => focusPane(view.pane.id)
+          },
+          agentMark(view.agent),
+          h('span', { class: 'sess-name' }, view.title),
+          h('span', { class: 'sess-status' }, ' · ', h('span', { class: view.status }, view.status))
+        )
+      )
+    }
+    return rows
+  }
+
+  private menu: HTMLElement | null = null
+
+  private agentMenuButton(project: AppState['settings']['projects'][number]): HTMLElement {
+    const button = iconButton(`Choose agent for ${project.name}`, ICONS.chevronDown, () => this.toggleMenu(button, project), 'small')
+    button.setAttribute('aria-haspopup', 'menu')
+    return button
+  }
+
+  private readonly outside = (event: Event): void => {
+    if (this.menu && !this.menu.contains(event.target as Node)) this.closeMenu()
+  }
+
+  private closeMenu(): void {
+    document.removeEventListener('pointerdown', this.outside, true)
+    this.menu?.remove()
+    this.menu = null
+  }
+
+  private async showResume(project: Project): Promise<void> {
+    const menu = this.menu
+    if (!menu) return
+    menu.replaceChildren(h('p', { class: 'menu-note' }, 'Loading sessions…'))
+    const lists = await Promise.all(
+      AGENTS.map(async (agent) => {
+        const entries = await api.listResumable(agent, project.folder).catch((): ResumeEntry[] => [])
+        return entries.map((entry) => ({ agent, entry }))
+      })
+    )
+    if (this.menu !== menu) return
+    const rows = lists
+      .flat()
+      .sort((a, b) => b.entry.modifiedAt - a.entry.modifiedAt)
+      .slice(0, MAX_RESUME)
+    const items = rows.map(({ agent, entry }) =>
+      h(
+        'button',
+        {
+          class: 'menu-item resume-item',
+          type: 'button',
+          role: 'menuitem',
+          title: entry.title,
+          'data-session-id': entry.id,
+          onClick: () => {
+            this.closeMenu()
+            void startSession(project.id, agent, entry.id)
+          }
+        },
+        agentMark(agent),
+        h('span', { class: 'resume-title' }, entry.title),
+        h('span', { class: 'resume-age' }, `${formatAge(Date.now() - entry.modifiedAt)} ago`)
+      )
+    )
+    menu.replaceChildren(
+      h('p', { class: 'menu-note' }, `Resume a session in ${project.name}`),
+      ...(items.length > 0 ? items : [h('p', { class: 'menu-note' }, 'No earlier sessions found.')])
+    )
+    menu.querySelector<HTMLElement>('.menu-item')?.focus()
+  }
+
+  private toggleMenu(anchor: HTMLElement, project: Project): void {
+    if (this.menu) return this.closeMenu()
+    const projectId = project.id
+    const choose = (agent: AgentKind): void => {
+      this.closeMenu()
+      void startSession(projectId, agent)
+    }
+    const resume = h(
+      'button',
+      { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => void this.showResume(project) },
+      'Resume session…'
+    )
+    const item = (agent: AgentKind): HTMLElement =>
+      h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), `${AGENT_NAMES[agent]} session`)
+    const rect = anchor.getBoundingClientRect()
+    const first = item('claude')
+    this.menu = h(
+      'div',
+      { class: 'popover menu floating', role: 'menu', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 2)}px` },
+      first,
+      item('codex'),
+      item('gemini'),
+      resume
+    )
+    this.menu.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      this.closeMenu()
+      anchor.focus()
+    })
+    document.body.appendChild(this.menu)
+    first.focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
+  }
+}
