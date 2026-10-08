@@ -78,8 +78,9 @@ function scoreItem(item: PaletteItem, query: string): Match | null {
   const title = fuzzyMatch(query, item.title)
   if (title) return title
   if (!item.keywords) return null
-  const keyword = fuzzyMatch(query, item.keywords)
-  return keyword ? { score: keyword.score - KEYWORD_PENALTY, indexes: [] } : null
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean)
+  const keywords = item.keywords.toLowerCase()
+  return tokens.every((token) => keywords.includes(token)) ? { score: 1000 - KEYWORD_PENALTY, indexes: [] } : null
 }
 
 function groupRank(label: string): number {

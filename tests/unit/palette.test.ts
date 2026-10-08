@@ -78,6 +78,13 @@ describe('buildGroups', () => {
     expect(actions?.rows.map((r) => r.item.id)).toEqual(['a-new', 'a-resume'])
   })
 
+  it('needs a keyword to contain each word of the query instead of matching scattered letters', () => {
+    const items = [item('h', 'Continue in Gemini', 'Actions', { keywords: 'handoff switch agent summary' })]
+    expect(buildGroups(items, 'docs day', [])).toEqual([])
+    expect(buildGroups(items, 'switch agent', [])).toHaveLength(1)
+    expect(buildGroups(items, 'SUMMARY', [])).toHaveLength(1)
+  })
+
   it('returns the highlighted indexes of a title match', () => {
     const groups = buildGroups(ITEMS, 'two', [])
     expect(groups[0].rows[0].indexes).toEqual([4, 5, 6])
