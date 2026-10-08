@@ -24,6 +24,7 @@ interface GridHook {
   bufferText(id: string): string
   fontSize(id: string): number
   feed(id: string, data: string): void
+  selectAll(id: string): void
 }
 
 export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
@@ -102,6 +103,9 @@ export const bufferText = (page: Page, id: string): Promise<string> =>
 
 export const feedTerminal = (page: Page, id: string, data: string): Promise<void> =>
   page.evaluate(([termId, text]) => (window as unknown as { __grid: GridHook }).__grid.feed(termId, text), [id, data])
+
+export const selectAllText = (page: Page, id: string): Promise<void> =>
+  page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.selectAll(termId), id)
 
 export const fontSize = (page: Page, id: string): Promise<number> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.fontSize(termId), id)

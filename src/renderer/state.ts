@@ -47,6 +47,8 @@ export type QuickPickMode = 'new' | 'resume'
 
 export type View = 'grid' | 'projects' | 'agents'
 
+export type ProjectsTab = 'projects' | 'snippets'
+
 export interface AgentsState {
   report: AgentsReport | null
   checking: boolean
@@ -74,6 +76,7 @@ export interface AppState {
   focusedId: string | null
   maximizedId: string | null
   view: View
+  projectsTab: ProjectsTab
   sessions: SessionFile[]
   codexSessions: CodexSession[]
   geminiSessions: GeminiSession[]
@@ -111,6 +114,7 @@ export const initialState = (): AppState => ({
   focusedId: null,
   maximizedId: null,
   view: 'grid',
+  projectsTab: 'projects',
   sessions: [],
   codexSessions: [],
   geminiSessions: [],

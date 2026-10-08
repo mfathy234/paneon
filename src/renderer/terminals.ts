@@ -60,7 +60,8 @@ Object.defineProperty(window, '__grid', {
   value: {
     bufferText: (id: string): string => views.get(id)?.bufferText() ?? '',
     fontSize: (id: string): number => views.get(id)?.fontSize ?? 0,
-    feed: (id: string, data: string): void => views.get(id)?.write(data)
+    feed: (id: string, data: string): void => views.get(id)?.write(data),
+    selectAll: (id: string): void => views.get(id)?.selectAll()
   }
 })
 

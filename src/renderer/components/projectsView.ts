@@ -1,9 +1,10 @@
-import { addProject, removeProject, updateProject } from '../actions'
+import { addProject, removeProject, showProjectsTab, updateProject } from '../actions'
 import { api } from '../api'
 import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import type { AgentKind, Project } from '../../shared/types'
 import { clear, h } from '../dom'
-import type { AppState } from '../state'
+import type { AppState, ProjectsTab } from '../state'
+import { SnippetsPanelComponent } from './snippetsPanel'
 
 export class ProjectsViewComponent {
   readonly el = h('main', { class: 'projects-view', 'aria-label': 'Projects' })
@@ -14,9 +15,12 @@ export class ProjectsViewComponent {
   private signature = ''
   private current: AppState | null = null
 
+  private readonly snippets = new SnippetsPanelComponent()
+  private readonly tabs = new Map<ProjectsTab, HTMLElement>()
+  private readonly projectsPanel = h('div', { class: 'proj-panel', role: 'tabpanel', id: 'panel-projects' })
+
   constructor() {
-    this.el.append(
-      h('h1', {}, 'Projects'),
+    this.projectsPanel.append(
       h('p', { class: 'lede' }, "Each project maps to a folder. Starting a session opens the project's default agent there."),
       h(
         'div',
@@ -34,10 +38,46 @@ export class ProjectsViewComponent {
         h('button', { class: 'btn ghost', type: 'button', id: 'add-project', onClick: () => void this.add() }, 'Add project')
       )
     )
+    this.snippets.el.setAttribute('role', 'tabpanel')
+    this.snippets.el.id = 'panel-snippets'
+    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.snippets.el)
+  }
+
+  private tabBar(): HTMLElement {
+    const tab = (value: ProjectsTab, label: string): HTMLElement => {
+      const button = h(
+        'button',
+        {
+          class: 'rp-tab',
+          type: 'button',
+          role: 'tab',
+          id: `tab-${value}`,
+          'aria-controls': `panel-${value}`,
+          onClick: () => showProjectsTab(value)
+        },
+        label
+      )
+      this.tabs.set(value, button)
+      return button
+    }
+    return h('div', { class: 'rp-tabs proj-tabs', role: 'tablist', 'aria-label': 'Projects view' }, tab('projects', 'Projects'), tab('snippets', 'Snippets'))
+  }
+
+  private updateTabs(state: AppState): void {
+    for (const [value, button] of this.tabs) {
+      const selected = state.projectsTab === value
+      button.classList.toggle('selected', selected)
+      button.setAttribute('aria-selected', String(selected))
+      button.tabIndex = selected ? 0 : -1
+    }
+    this.projectsPanel.hidden = state.projectsTab !== 'projects'
+    this.snippets.el.hidden = state.projectsTab !== 'snippets'
   }
 
   update(state: AppState): void {
     this.current = state
+    this.updateTabs(state)
+    this.snippets.update(state)
     this.updateCounts(state)
     const signature = JSON.stringify(state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]))
     if (signature === this.signature) return

@@ -49,6 +49,14 @@ export interface SavedLayout {
   panes: SavedPane[]
 }
 
+export interface Snippet {
+  id: string
+  name: string
+  text: string
+  projectId: string | null
+  shortcut: number | null
+}
+
 export interface SessionInfoSettings {
   notifications: boolean
   sound: boolean
@@ -63,6 +71,7 @@ export interface Settings {
   onboardingDismissed: boolean
   workspace: Workspace
   layouts: SavedLayout[]
+  snippets: Snippet[]
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
   paletteShortcut: string

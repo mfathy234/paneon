@@ -456,6 +456,14 @@ export function showView(view: AppState['view']): void {
   store.patch({ view })
 }
 
+export function showProjectsTab(projectsTab: AppState['projectsTab']): void {
+  store.patch({ projectsTab })
+}
+
+export function openSnippets(): void {
+  store.patch({ view: 'projects', projectsTab: 'snippets' })
+}
+
 export function openQuickPick(preset: AgentPreset = 'default'): void {
   store.patch({
     quickPickOpen: true,
@@ -648,10 +656,12 @@ export async function removeProject(projectId: string): Promise<void> {
   const project = projectById(store.state, projectId)
   if (!project) return
   const open = store.state.panes.filter((p) => p.projectId === projectId)
+  const scoped = store.state.settings.snippets.filter((s) => s.projectId === projectId).length
+  const snippetNote = scoped > 0 ? ` Its ${scoped} snippet${scoped === 1 ? '' : 's'} ${scoped === 1 ? 'is' : 'are'} removed too.` : ''
   const body =
     open.length > 0
-      ? `This removes ${project.name} from Paneon and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.`
-      : `This removes ${project.name} from Paneon. The folder stays on disk.`
+      ? `This removes ${project.name} from Paneon and stops its ${open.length} open session${open.length === 1 ? '' : 's'}. The folder stays on disk.${snippetNote}`
+      : `This removes ${project.name} from Paneon. The folder stays on disk.${snippetNote}`
   const confirmed = await confirmDialog({
     title: `Remove ${project.name}?`,
     body,
@@ -660,8 +670,9 @@ export async function removeProject(projectId: string): Promise<void> {
   if (!confirmed) return
   for (const pane of open) await discardPane(pane.id)
   const projects = store.state.settings.projects.filter((p) => p.id !== projectId)
-  store.set((s) => ({ ...s, settings: { ...s.settings, projects } }))
-  saveProjects()
+  const snippets = store.state.settings.snippets.filter((s) => s.projectId !== projectId)
+  store.set((s) => ({ ...s, settings: { ...s.settings, projects, snippets } }))
+  void saveSettings({ projects, snippets })
 }
 
 export function buildPane(saved: SavedPane, project: Project): PaneState {

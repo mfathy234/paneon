@@ -2,6 +2,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
+import { insertionData } from '../shared/snippets'
 import { h } from './dom'
 import type { ThemeBundle } from './themeManager'
 
@@ -99,6 +100,20 @@ export class TerminalView {
       lines.push(buffer.getLine(row)?.translateToString(true) ?? '')
     }
     return lines.join('\n')
+  }
+
+  selectAll(): void {
+    this.term.selectAll()
+  }
+
+  selection(): string {
+    return this.term.getSelection()
+  }
+
+  insertText(text: string): { flattened: boolean } {
+    const { data, flattened } = insertionData(text, this.term.modes.bracketedPasteMode)
+    if (data) this.callbacks.onInput(data)
+    return { flattened }
   }
 
   get fontSize(): number {
