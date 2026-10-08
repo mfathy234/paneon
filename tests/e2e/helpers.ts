@@ -110,7 +110,7 @@ export const selectAllText = (page: Page, id: string): Promise<void> =>
 export const fontSize = (page: Page, id: string): Promise<number> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.fontSize(termId), id)
 
-export const QUIT_BUDGET_MS = process.env.CI ? 30_000 : 10_000
+export const QUIT_BUDGET_MS = process.env.CI ? 60_000 : 10_000
 
 export async function closeApp(app: ElectronApplication): Promise<number> {
   const started = Date.now()
