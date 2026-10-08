@@ -1,0 +1,51 @@
+import { planFor } from '../shared/agentTools'
+import { folderName, runCli, type CliCommand, type CliHost, type CliReply } from '../shared/cli'
+import { api } from './api'
+import {
+  createProject,
+  openResumePicker,
+  refreshAgentTools,
+  resumeInNewPane,
+  runAgentTask,
+  startInFocusedPane,
+  startSession
+} from './actions'
+import { store } from './state'
+
+async function addProject(folder: string, name?: string): Promise<ReturnType<typeof createProject> | string> {
+  const check = await api.checkFolder(folder)
+  if (!check.ok) return `${folder}: ${check.error ?? 'not a folder.'}`
+  const projects = store.state.settings.projects
+  const wanted = (name ?? folderName(folder)).toLowerCase()
+  if (projects.some((p) => p.name.toLowerCase() === wanted)) {
+    return `A project named '${wanted}' already exists. Use paneon add <path> --name <name>.`
+  }
+  return createProject(folder, name)
+}
+
+async function updateAgents(): Promise<string> {
+  if (!store.state.agents.report) await refreshAgentTools(false)
+  const report = store.state.agents.report
+  if (!report) return 'Could not check the agents.'
+  if (!planFor(report.tools, 'updates')) return 'All installed agents are up to date.'
+  await runAgentTask('updates')
+  return 'Updating the agents in a shell tab.'
+}
+
+export function runCliCommand(command: CliCommand): Promise<CliReply> {
+  const host: CliHost = {
+    version: '',
+    get projects() {
+      return store.state.settings.projects
+    },
+    now: Date.now(),
+    openCount: (projectId) => store.state.panes.filter((p) => p.projectId === projectId).length,
+    listSessions: (query) => api.listAllResumable(query),
+    addProject,
+    startSession: (projectId, agent, here) => (here ? startInFocusedPane(projectId, agent) : startSession(projectId, agent)),
+    resumeSession: resumeInNewPane,
+    openResumePicker,
+    updateAgents
+  }
+  return runCli(command, host)
+}

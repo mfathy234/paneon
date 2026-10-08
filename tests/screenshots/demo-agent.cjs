@@ -42,6 +42,15 @@ const SCRIPTS = {
     '',
     `${amber('⠧')} Working (12s • esc to interrupt)`
   ],
+  'billing-api:codex': [
+    bold('› Add pagination to the invoices endpoint'),
+    '',
+    `${green('•')} The list query has no limit; adding page and pageSize parameters.`,
+    dim('  edit  src/routes/invoices.ts  (+14 -3)'),
+    dim('  edit  tests/invoices.spec.ts  (+22)'),
+    '',
+    `${amber('⠧')} Working (4s • esc to interrupt)`
+  ],
   'docs-site': [
     bold('> Rewrite the getting started guide for the new installer'),
     '',
@@ -54,7 +63,7 @@ const SCRIPTS = {
 }
 
 const name = path.basename(process.cwd())
-const lines = SCRIPTS[name] ?? [bold('> Ready')]
+const lines = SCRIPTS[`${name}:${process.argv[2]}`] ?? SCRIPTS[name] ?? [bold('> Ready')]
 process.stdout.write('\r\n')
 for (const line of lines) process.stdout.write(`${line}\r\n`)
 process.stdout.write('\r\n')

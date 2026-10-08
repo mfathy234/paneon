@@ -8,6 +8,12 @@ import { SettingsStore } from '../../src/main/settingsStore'
 const tempFile = (): string => join(mkdtempSync(join(tmpdir(), 'cg-settings-')), 'settings.json')
 
 describe('migrateSettings', () => {
+  it('keeps the onboarding dismissal only when it is exactly true', () => {
+    expect(migrateSettings({}).onboardingDismissed).toBe(false)
+    expect(migrateSettings({ onboardingDismissed: 'yes' }).onboardingDismissed).toBe(false)
+    expect(migrateSettings({ onboardingDismissed: true }).onboardingDismissed).toBe(true)
+  })
+
   it('returns defaults for junk input', () => {
     expect(migrateSettings(null)).toEqual(defaultSettings())
     expect(migrateSettings('x')).toEqual(defaultSettings())

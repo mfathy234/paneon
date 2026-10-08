@@ -1,16 +1,12 @@
-import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
+import { AGENT_NAMES, agentOf } from '../../shared/agents'
 import { filterProjects } from '../../shared/quickPick'
-import { formatAge } from '../../shared/statusLine'
-import type { AgentKind, Project, ResumeEntry } from '../../shared/types'
-import { api } from '../api'
-import { focusPane, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
+import type { AgentKind, Project } from '../../shared/types'
+import { focusPane, openResumePicker, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import type { AppState } from '../state'
-
-const MAX_RESUME = 15
 
 export function isSidebarCollapsed(state: AppState): boolean {
   const maximized = state.view === 'grid' && state.maximizedId !== null
@@ -194,47 +190,6 @@ export class SidebarComponent {
     this.menu = null
   }
 
-  private async showResume(project: Project): Promise<void> {
-    const menu = this.menu
-    if (!menu) return
-    menu.replaceChildren(h('p', { class: 'menu-note' }, 'Loading sessions…'))
-    const lists = await Promise.all(
-      AGENTS.map(async (agent) => {
-        const entries = await api.listResumable(agent, project.folder).catch((): ResumeEntry[] => [])
-        return entries.map((entry) => ({ agent, entry }))
-      })
-    )
-    if (this.menu !== menu) return
-    const rows = lists
-      .flat()
-      .sort((a, b) => b.entry.modifiedAt - a.entry.modifiedAt)
-      .slice(0, MAX_RESUME)
-    const items = rows.map(({ agent, entry }) =>
-      h(
-        'button',
-        {
-          class: 'menu-item resume-item',
-          type: 'button',
-          role: 'menuitem',
-          title: entry.title,
-          'data-session-id': entry.id,
-          onClick: () => {
-            this.closeMenu()
-            void startSession(project.id, agent, entry.id)
-          }
-        },
-        agentMark(agent),
-        h('span', { class: 'resume-title' }, entry.title),
-        h('span', { class: 'resume-age' }, `${formatAge(Date.now() - entry.modifiedAt)} ago`)
-      )
-    )
-    menu.replaceChildren(
-      h('p', { class: 'menu-note' }, `Resume a session in ${project.name}`),
-      ...(items.length > 0 ? items : [h('p', { class: 'menu-note' }, 'No earlier sessions found.')])
-    )
-    menu.querySelector<HTMLElement>('.menu-item')?.focus()
-  }
-
   private toggleMenu(anchor: HTMLElement, project: Project): void {
     if (this.menu) return this.closeMenu()
     const projectId = project.id
@@ -244,8 +199,16 @@ export class SidebarComponent {
     }
     const resume = h(
       'button',
-      { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => void this.showResume(project) },
-      'Resume session…'
+      {
+        class: 'menu-item',
+        type: 'button',
+        role: 'menuitem',
+        onClick: () => {
+          this.closeMenu()
+          openResumePicker(projectId)
+        }
+      },
+      `Resume in ${project.name}…`
     )
     const item = (agent: AgentKind): HTMLElement =>
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => choose(agent) }, agentMark(agent), `${AGENT_NAMES[agent]} session`)

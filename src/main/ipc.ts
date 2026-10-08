@@ -1,13 +1,14 @@
 import { statSync } from 'node:fs'
 import { BrowserWindow, clipboard, dialog, ipcMain, shell, app } from 'electron'
 import { IPC } from '../shared/ipc'
-import type { AgentKind, FolderCheck, NotifyRequest, QuickOpenKind, Settings, SpawnRequest } from '../shared/types'
+import type { AgentKind, FolderCheck, NotifyRequest, QuickOpenKind, ResumeQuery, Settings, SpawnRequest } from '../shared/types'
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { notifyUser, quickOpen } from './desktop'
 import { currentBranch, gitChanges } from './git'
 import { checkAgentTools } from './agentTools'
 import { bridgeDirs, claudeSettingsPath } from './paths'
+import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
 import type { OpsWatcher } from './opsWatcher'
@@ -69,6 +70,7 @@ export function registerIpc(
   ipcMain.handle(IPC.resumeList, (_event, agent: AgentKind, folder: string) =>
     agent === 'codex' ? listCodexSessions(folder) : agent === 'gemini' ? listGeminiSessions(folder) : listClaudeSessions(folder)
   )
+  ipcMain.handle(IPC.resumeAll, (_event, query: ResumeQuery) => listAllSessions(settings.get().projects, query ?? {}))
   ipcMain.handle(IPC.quickOpen, (_event, kind: QuickOpenKind, folder: string) => quickOpen(kind, folder))
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow(), request))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))

@@ -37,6 +37,7 @@ export const defaultSettings = (): Settings => ({
   theme: { id: DEFAULT_THEME_ID, image: defaultImage() },
   sidebarCollapsed: false,
   sessionInfo: { notifications: true, sound: false },
+  onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 }
 })
 
@@ -121,6 +122,7 @@ export function migrateSettings(raw: unknown): Settings {
       notifications: typeof info.notifications === 'boolean' ? info.notifications : defaults.sessionInfo.notifications,
       sound: typeof info.sound === 'boolean' ? info.sound : defaults.sessionInfo.sound
     },
+    onboardingDismissed: raw.onboardingDismissed === true,
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id)))
   }
 }

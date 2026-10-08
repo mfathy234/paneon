@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createFakeTools } from '../support/fakeTools'
-import { closeApp, createSandbox, launchApp, type Sandbox } from '../e2e/helpers'
+import { closeApp, createSandbox, launchApp, runCli, type Sandbox } from '../e2e/helpers'
+import { CLAUDE_IDS, composeCliImage, writeHistory, type CliRun } from './resumeFixtures'
 
 const OUT = resolve(__dirname, '../../docs/screenshots')
 const DEMO_ROOT = 'C:\\paneon-demo'
@@ -29,11 +30,11 @@ function demoEnv(): Record<string, string> {
   const node = process.execPath
   return {
     PANEON_CLAUDE_COMMAND: node,
-    PANEON_CLAUDE_ARGS: JSON.stringify([SCRIPT]),
+    PANEON_CLAUDE_ARGS: JSON.stringify([SCRIPT, 'claude']),
     PANEON_CODEX_COMMAND: node,
-    PANEON_CODEX_ARGS: JSON.stringify([SCRIPT]),
+    PANEON_CODEX_ARGS: JSON.stringify([SCRIPT, 'codex']),
     PANEON_GEMINI_COMMAND: node,
-    PANEON_GEMINI_ARGS: JSON.stringify([SCRIPT])
+    PANEON_GEMINI_ARGS: JSON.stringify([SCRIPT, 'gemini'])
   }
 }
 
@@ -51,7 +52,7 @@ function writeClaudeSession(sandbox: Sandbox, project: string, name: string, sta
     join(sandbox.sessionsDir, `${project}.json`),
     JSON.stringify({
       pid: process.pid,
-      sessionId: `sess-${project}`,
+      sessionId: CLAUDE_IDS[project] ?? `sess-${project}`,
       cwd: folder(project),
       name,
       nameSource: 'user',
@@ -68,7 +69,7 @@ function writeOps(sandbox: Sandbox): void {
   mkdirSync(sandbox.opsDir, { recursive: true })
   const snapshot = {
     v: 1,
-    sessionId: 'sess-acme-web',
+    sessionId: CLAUDE_IDS['acme-web'],
     cwd: folder('acme-web'),
     updatedAt: now,
     ended: false,
@@ -99,7 +100,7 @@ function writeOps(sandbox: Sandbox): void {
       { kind: 'test', target: 'acme-web', ok: true, summary: '41 passed  0 failed', at: now - 60_000 }
     ]
   }
-  writeFileSync(join(sandbox.opsDir, 'sess-acme-web.json'), JSON.stringify(snapshot), 'utf8')
+  writeFileSync(join(sandbox.opsDir, `${CLAUDE_IDS['acme-web']}.json`), JSON.stringify(snapshot), 'utf8')
 }
 
 function writeCodex(sandbox: Sandbox): void {
@@ -108,6 +109,8 @@ function writeCodex(sandbox: Sandbox): void {
   mkdirSync(dir, { recursive: true })
   const lines = [
     { type: 'session_meta', payload: { id, cwd: folder('mobile-shell'), timestamp: new Date(Date.now() + 1000).toISOString() } },
+    { type: 'event_msg', payload: { type: 'user_message', message: 'Fix the flaky login test' } },
+    { type: 'event_msg', payload: { type: 'agent_message', message: 'Replacing the sleep with a wait on the session ready event.' } },
     { type: 'event_msg', payload: { type: 'task_started' } },
     { type: 'turn_context', payload: { model: 'gpt-5.6-sol' } },
     { type: 'event_msg', payload: { type: 'token_count', info: { last_token_usage: { total_tokens: 64000 }, model_context_window: 200000 } } }
@@ -159,6 +162,7 @@ test('generates the README screenshots from fake projects only', async () => {
   mkdirSync(OUT, { recursive: true })
   const sandbox = createSandbox()
   seed(sandbox, true)
+  writeHistory(sandbox, folder)
   const { app, page } = await launchApp(sandbox, demoEnv())
   try {
     await resize(app)
@@ -201,11 +205,36 @@ test('generates the README screenshots from fake projects only', async () => {
     await page.screenshot({ path: join(OUT, 'projects.png') })
     await page.locator('#projects-button').click()
 
+    await page.keyboard.press('Control+Shift+R')
+    await expect(page.locator('.rp-row')).toHaveCount(8, { timeout: 20_000 })
+    await page.locator('.rp-row').first().hover()
+    await settle(page, 800)
+    await page.mouse.move(700, 300)
+    await page.screenshot({ path: join(OUT, 'resume-picker.png') })
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.resume-picker')).toHaveCount(0)
+
     await page.getByRole('button', { name: 'Theme' }).click()
     await page.locator('#theme-tokyo-night').click()
     await expect(page.locator('.theme-picker')).toBeVisible()
     await settle(page, 1200)
     await page.screenshot({ path: join(OUT, 'themes.png') })
+    await page.locator('#theme-grid-dark').click()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.theme-picker')).toHaveCount(0)
+
+    const runs: CliRun[] = []
+    const demoCwd = folder('acme-web')
+    for (const args of [['ls'], ['start', 'billing-api', '--agent', 'codex'], ['sessions', 'acme-web']]) {
+      const result = await runCli(sandbox, args, demoCwd)
+      expect(result.code).toBe(0)
+      runs.push({ cwd: demoCwd, command: `paneon ${args.join(' ')}`, out: result.out })
+    }
+    await expect(page.locator('.pane')).toHaveCount(5)
+    await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(2)
+    await settle(page, 2000)
+    await composeCliImage(page, await page.screenshot(), runs)
+    await page.screenshot({ path: join(OUT, 'cli.png') })
   } finally {
     await closeApp(app)
   }
@@ -232,5 +261,22 @@ test('generates the README screenshots from fake projects only', async () => {
     await launched.page.screenshot({ path: join(OUT, 'agents.png') })
   } finally {
     await closeApp(launched.app)
+  }
+
+  const third = createSandbox({ empty: true })
+  const first = await launchApp(third, {
+    PATH: `${tools.pathEntry}${delimiter}${process.env.PATH ?? ''}`,
+    PANEON_CLAUDE_COMMAND: tools.commands.claude,
+    PANEON_CODEX_COMMAND: tools.commands.codex,
+    PANEON_GEMINI_COMMAND: tools.commands.gemini
+  })
+  try {
+    await resize(first.app)
+    await expect(first.page.locator('.onboarding')).toBeVisible()
+    await expect(first.page.locator('#ob-agents')).toContainText('installed')
+    await settle(first.page, 800)
+    await first.page.screenshot({ path: join(OUT, 'onboarding.png') })
+  } finally {
+    await closeApp(first.app)
   }
 })

@@ -1,4 +1,4 @@
-import { disableBridge, enableBridge, setImage, setSessionInfo, setTheme, toggleThemePicker } from '../actions'
+import { disableBridge, enableBridge, openOnboarding, setImage, setSessionInfo, setTheme, toggleThemePicker } from '../actions'
 import { api } from '../api'
 import { THEMES, findTheme } from '../../shared/themes'
 import { h } from '../dom'
@@ -69,7 +69,12 @@ export class ThemePickerComponent {
       h('div', { class: 'theme-list', role: 'radiogroup', 'aria-label': 'Theme' }, ...THEMES.map((t) => this.row(t.id, theme.id))),
       active.kind === 'light' ? h('p', { class: 'note', id: 'light-note' }, LIGHT_NOTE) : null,
       this.imageSection(state),
-      this.infoSection(state)
+      this.infoSection(state),
+      h(
+        'div',
+        { class: 'image-section' },
+        h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…')
+      )
     ]
     this.root.replaceChildren(...children.filter((c): c is HTMLElement => c !== null))
     if (focusedId) document.getElementById(focusedId)?.focus()

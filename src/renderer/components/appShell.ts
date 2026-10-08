@@ -4,7 +4,9 @@ import type { AppState } from '../state'
 import { AgentsViewComponent } from './agentsView'
 import { GridComponent } from './grid'
 import { ProjectsViewComponent } from './projectsView'
+import { OnboardingComponent } from './onboarding'
 import { QuickPickComponent } from './quickpick'
+import { ResumePickerComponent } from './resumePicker'
 import { SidebarComponent } from './sidebar'
 import { ThemePickerComponent } from './themePicker'
 import { TopBarComponent } from './topbar'
@@ -17,6 +19,8 @@ export class AppShell {
   private readonly projects = new ProjectsViewComponent()
   private readonly agents = new AgentsViewComponent()
   private readonly quickPick = new QuickPickComponent(() => this.topbar.newSession)
+  private readonly resumePicker = new ResumePickerComponent(() => this.topbar.newSession)
+  private readonly onboarding = new OnboardingComponent()
   private readonly themePicker = new ThemePickerComponent(() => this.topbar.themeButton)
   private lastView: AppState['view'] = 'grid'
 
@@ -38,6 +42,8 @@ export class AppShell {
     this.lastView = state.view
     this.grid.update(state)
     this.quickPick.update(state)
+    this.resumePicker.update(state)
+    this.onboarding.update(state)
     this.themePicker.update(state)
   }
 }

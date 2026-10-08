@@ -16,6 +16,7 @@ export const ICONS = {
   search: svg(16, '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
   branch: svg(12, '<circle cx="6" cy="5" r="2.5"/><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 7.5v9 M18 11.5c0 4-6 3-12 5.5"/>'),
   more: svg(16, '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>', 2.5),
+  history: svg(14, '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>'),
   chevronRight: svg(14, '<polyline points="9 18 15 12 9 6"/>'),
   chevronUp: svg(14, '<polyline points="18 15 12 9 6 15"/>'),
   chevronDown: svg(14, '<polyline points="6 9 12 15 18 9"/>'),

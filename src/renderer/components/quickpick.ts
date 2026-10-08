@@ -1,4 +1,4 @@
-import { closeQuickPick, showView, startSession } from '../actions'
+import { closeQuickPick, setQuickPickMode, showView, startSession } from '../actions'
 import { AGENT_NAMES } from '../../shared/agents'
 import {
   filterProjects,
@@ -12,6 +12,7 @@ import type { Project } from '../../shared/types'
 import { clear, h, icon } from '../dom'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
+import { modeTabs } from './pickerTabs'
 import type { AppState } from '../state'
 
 export class QuickPickComponent {
@@ -29,8 +30,9 @@ export class QuickPickComponent {
   update(state: AppState): void {
     this.projects = state.settings.projects
     this.preset = state.quickPickPreset
-    if (state.quickPickOpen && !this.root) this.open()
-    if (!state.quickPickOpen && this.root) this.close()
+    const wanted = state.quickPickOpen && state.quickPickMode === 'new'
+    if (wanted && !this.root) this.open()
+    if (!wanted && this.root) this.close(state.quickPickOpen)
   }
 
   private open(): void {
@@ -49,9 +51,10 @@ export class QuickPickComponent {
     this.root = h(
       'div',
       { class: 'popover quickpick', style: `left:${Math.round(rect.left)}px;top:${Math.round(rect.bottom + 2)}px` },
+      modeTabs('new'),
       this.input,
       this.list,
-      h('div', { class: 'popover-foot' }, 'Enter starts a session. Tab switches agent')
+      h('div', { class: 'popover-foot' }, 'Enter starts a session. Tab switches agent. Ctrl+R resumes')
     )
     this.selected = 0
     this.overrides = {}
@@ -71,17 +74,21 @@ export class QuickPickComponent {
     if (this.root && !this.root.contains(target) && !this.anchor().contains(target)) closeQuickPick()
   }
 
-  private close(): void {
+  private close(stillOpen: boolean): void {
     document.removeEventListener('pointerdown', this.outside, true)
     this.root?.remove()
     this.root = null
     this.input = null
     this.list = null
-    this.anchor().focus()
+    if (!stillOpen) this.anchor().focus()
   }
 
   private onKey(event: KeyboardEvent): void {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'r') {
+      event.preventDefault()
+      event.stopPropagation()
+      setQuickPickMode('resume')
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       this.selected = moveSelection(this.selected, event.key === 'ArrowDown' ? 1 : -1, this.matches.length)
       this.renderList()

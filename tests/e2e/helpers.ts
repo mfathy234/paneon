@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { spawn } from 'node:child_process'
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
 
 export interface Sandbox {
@@ -14,6 +15,7 @@ export interface Sandbox {
   openLog: string
   opsDir: string
   notifyLog: string
+  pipe: string
 }
 
 interface GridHook {
@@ -21,7 +23,7 @@ interface GridHook {
   fontSize(id: string): number
 }
 
-export function createSandbox(): Sandbox {
+export function createSandbox(options: { empty?: boolean } = {}): Sandbox {
   const root = mkdtempSync(join(tmpdir(), 'paneon-e2e-'))
   const userData = join(root, 'userData')
   const projectFolder = join(root, 'Smoke Project')
@@ -37,7 +39,7 @@ export function createSandbox(): Sandbox {
       { id: 'gone', name: 'Missing', folder: join(root, 'does-not-exist') }
     ]
   }
-  writeFileSync(join(userData, 'settings.json'), JSON.stringify(settings), 'utf8')
+  if (!options.empty) writeFileSync(join(userData, 'settings.json'), JSON.stringify(settings), 'utf8')
   return {
     root,
     userData,
@@ -48,7 +50,8 @@ export function createSandbox(): Sandbox {
     claudeHome,
     openLog: join(root, 'open.log'),
     opsDir: join(root, 'ops'),
-    notifyLog: join(root, 'notify.log')
+    notifyLog: join(root, 'notify.log'),
+    pipe: String.raw`\\.\pipe\paneon-e2e-${process.pid}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
   }
 }
 
@@ -74,6 +77,7 @@ export async function launchApp(
       PANEON_OPS_DIR: sandbox.opsDir,
       PANEON_OPEN_LOG: sandbox.openLog,
       PANEON_NOTIFY_LOG: sandbox.notifyLog,
+      PANEON_PIPE: sandbox.pipe,
       ...extraEnv
     }
   })
@@ -105,4 +109,24 @@ export async function closeApp(app: ElectronApplication): Promise<number> {
   const elapsed = Date.now() - started
   if (proc.exitCode === null) proc.kill()
   return elapsed
+}
+
+export interface CliResult {
+  code: number | null
+  out: string
+  err: string
+}
+
+export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.root): Promise<CliResult> {
+  const electronPath = require('electron') as unknown as string
+  const env = { ...process.env, ELECTRON_RUN_AS_NODE: '1', PANEON_PIPE: sandbox.pipe } as Record<string, string>
+  return new Promise((resolveResult, reject) => {
+    const child = spawn(electronPath, [resolve(__dirname, '../../build/paneon-cli.cjs'), ...args], { cwd, env })
+    let out = ''
+    let err = ''
+    child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()))
+    child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString()))
+    child.on('error', reject)
+    child.on('close', (code) => resolveResult({ code, out: out.trim(), err: err.trim() }))
+  })
 }

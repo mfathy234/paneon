@@ -25,11 +25,14 @@ import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { ensureTerminal } from '../terminals'
 
+const RESUMED_CHIP_MS = 60_000
+
 export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
+  private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
   private readonly branch = h('span', { class: 'chip', hidden: true })
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly statusWord = h('span', { class: 'status' })
@@ -57,6 +60,7 @@ export class PaneComponent {
       this.mark,
       this.index,
       this.fresh,
+      this.resumed,
       this.branch,
       this.statusWord,
       this.attentionWord,
@@ -92,6 +96,8 @@ export class PaneComponent {
     this.index.textContent = `${view.index + 1} · ${title}`
     this.updateMark(view.agent)
     this.fresh.hidden = view.named
+    const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
+    this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
     this.el.classList.toggle('maximized', maximized)

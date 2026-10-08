@@ -1,5 +1,6 @@
 import { api } from './api'
 import { noteOutput } from './ptyActivity'
+import { mapTerm, store } from './state'
 import { currentBundle } from './themeManager'
 import { TerminalView } from './terminalView'
 
@@ -16,11 +17,19 @@ export const setTerminalEvents = (value: TerminalEvents): void => {
   events = value
 }
 
+function clearResumeChip(id: string): void {
+  const pending = store.state.panes.some((p) => p.tabs.some((t) => t.id === id && t.resumeChipAt !== undefined))
+  if (pending) store.set((s) => mapTerm(s, id, (t) => ({ ...t, resumeChipAt: undefined })))
+}
+
 export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const existing = views.get(id)
   if (existing) return existing
   const view = new TerminalView(id, fontSize, currentBundle(), {
-    onInput: (data) => api.write(id, data),
+    onInput: (data) => {
+      api.write(id, data)
+      if (data.charCodeAt(0) !== 27 || data.length === 1) clearResumeChip(id)
+    },
     onResize: (cols, rows) => api.resize(id, cols, rows),
     onZoom: (direction) => events.onZoom(id, direction),
     onFocus: () => events.onFocus(id),

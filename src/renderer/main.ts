@@ -4,6 +4,7 @@ import {
   flushWorkspace,
   focusPane,
   handleTerminalExit,
+  openOnboarding,
   refreshBranches,
   refreshAgentTools,
   refreshBridge,
@@ -20,6 +21,7 @@ import { installAttention } from './attention'
 import { installOps } from './ops'
 import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
+import { runCliCommand } from './cliHost'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
@@ -80,8 +82,12 @@ async function boot(): Promise<void> {
   void installOps()
   installKeyboard()
   api.onFlushRequest(flushWorkspace)
+  api.onCliRun(runCliCommand)
+  api.onCliNotice((text, ok) => toast(text, ok ? 'info' : 'error'))
   if (loaded.warning) toast(loaded.warning, 'info')
+  if (!loaded.settings.onboardingDismissed && loaded.settings.projects.length === 0) openOnboarding()
   await restoreWorkspace()
+  api.cliReady()
   document.documentElement.dataset.ready = 'true'
 }
 

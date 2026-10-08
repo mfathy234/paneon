@@ -52,6 +52,7 @@ export interface Settings {
   theme: ThemeSettings
   sidebarCollapsed: boolean
   sessionInfo: SessionInfoSettings
+  onboardingDismissed: boolean
   workspace: Workspace
 }
 
@@ -124,6 +125,26 @@ export interface ResumeEntry {
   id: string
   title: string
   modifiedAt: number
+}
+
+export interface ResumeSession {
+  agent: AgentKind
+  id: string
+  title: string
+  projectId: string
+  modifiedAt: number
+  startedAt: number
+  messageCount: number
+  model?: string
+  firstPrompt?: string
+  lastAssistant?: string
+}
+
+export interface ResumeQuery {
+  projectId?: string
+  agent?: AgentKind
+  query?: string
+  limit?: number
 }
 
 export type QuickOpenKind = 'vscode' | 'explorer'

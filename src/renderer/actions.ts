@@ -7,12 +7,14 @@ import {
   type GeminiSession,
   type Project,
   type QuickOpenKind,
+  type ResumeSession,
   type SessionInfoSettings,
   type StatusInfo,
   type Settings,
   type TabAgent
 } from '../shared/types'
 import { agentOf, AGENT_NAMES } from '../shared/agents'
+import { folderName } from '../shared/cli'
 import {
   NODE_NOTE,
   joinCommands,
@@ -195,10 +197,18 @@ export function handleTerminalExit(termId: string, exitCode: number): void {
   store.set((s) => mapTerm(s, termId, (t) => ({ ...t, status: 'exited', exitCode })))
 }
 
-export async function startSession(projectId: string, agent?: AgentKind, resumeId?: string): Promise<void> {
+export async function startSession(
+  projectId: string,
+  agent?: AgentKind,
+  resumeId?: string,
+  chip = false
+): Promise<number> {
   const project = projectById(store.state, projectId)
-  if (!project) return
-  const tab = makeTerm(agent ?? agentOf(project), [], resumeId)
+  if (!project) return 0
+  const tab: TermState = {
+    ...makeTerm(agent ?? agentOf(project), [], resumeId),
+    resumeChipAt: chip ? Date.now() : undefined
+  }
   const pane: PaneState = {
     id: newId(),
     projectId,
@@ -218,7 +228,9 @@ export async function startSession(projectId: string, agent?: AgentKind, resumeI
   persistWorkspace()
   void refreshBranches()
   void refreshGitChanges()
-  await launch(pane.id, tab.id, resumeId !== undefined)
+  const number = store.state.panes.findIndex((p) => p.id === pane.id) + 1
+  void launch(pane.id, tab.id, resumeId !== undefined)
+  return number
 }
 
 export async function addTab(paneId: string, agent: TabAgent, input?: string): Promise<void> {
@@ -460,7 +472,29 @@ export function showView(view: AppState['view']): void {
 }
 
 export function openQuickPick(preset: AgentPreset = 'default'): void {
-  store.patch({ quickPickOpen: true, quickPickPreset: preset, themePickerOpen: false })
+  store.patch({ quickPickOpen: true, quickPickPreset: preset, quickPickMode: 'new', themePickerOpen: false })
+}
+
+export function openResumePicker(projectId?: string): void {
+  store.patch({
+    quickPickOpen: true,
+    quickPickMode: 'resume',
+    resumeProjectId: projectId ?? null,
+    themePickerOpen: false
+  })
+}
+
+export function setQuickPickMode(mode: AppState['quickPickMode']): void {
+  store.patch({ quickPickMode: mode })
+}
+
+export function openOnboarding(): void {
+  store.patch({ onboardingOpen: true, themePickerOpen: false, quickPickOpen: false })
+}
+
+export function dismissOnboarding(): void {
+  store.set((s) => ({ ...s, onboardingOpen: false, settings: { ...s.settings, onboardingDismissed: true } }))
+  void saveSettings({ onboardingDismissed: true })
 }
 
 export function closeQuickPick(): void {
@@ -498,14 +532,16 @@ export function setImage(patch: Partial<BackgroundImage>): void {
   void saveSettings({ theme })
 }
 
-export async function addProject(): Promise<Project | null> {
-  const folder = await api.pickFolder()
-  if (!folder) return null
-  const name = folder.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || folder
-  const project: Project = { id: newId(), name, folder, defaultAgent: 'claude' }
+export function createProject(folder: string, name?: string): Project {
+  const project: Project = { id: newId(), name: name || folderName(folder), folder, defaultAgent: 'claude' }
   store.set((s) => ({ ...s, settings: { ...s.settings, projects: [...s.settings.projects, project] } }))
   saveProjects()
   return project
+}
+
+export async function addProject(): Promise<Project | null> {
+  const folder = await api.pickFolder()
+  return folder ? createProject(folder) : null
 }
 
 export function updateProject(
@@ -739,4 +775,95 @@ async function finishAgentTask(tab: TermState, exitCode: number): Promise<void> 
   })
   if (outcomes.length === 0) return
   toast(outcomes.map((o) => o.text).join(' '), outcomes.every((o) => o.ok) ? 'info' : 'error')
+}
+
+export interface OpenSession {
+  paneId: string
+  termId: string
+  number: number
+}
+
+export function findOpenSession(state: AppState, agent: AgentKind, sessionId: string): OpenSession | null {
+  const matched = matchAll(state)[agent] as Map<string, { sessionId: string }>
+  for (const [index, pane] of state.panes.entries()) {
+    for (const tab of pane.tabs) {
+      if (tab.agent !== agent || tab.status === 'exited') continue
+      if ((tab.sessionId ?? matched.get(tab.id)?.sessionId) === sessionId) {
+        return { paneId: pane.id, termId: tab.id, number: index + 1 }
+      }
+    }
+  }
+  return null
+}
+
+export function focusOpenSession(open: OpenSession): void {
+  store.set((s) =>
+    mapPane({ ...s, focusedId: open.paneId, view: 'grid', quickPickOpen: false }, open.paneId, (p) => ({
+      ...p,
+      activeTabId: open.termId
+    }))
+  )
+  persistWorkspace()
+}
+
+export interface ResumeOutcome {
+  pane: number
+  alreadyOpen: boolean
+}
+
+export async function resumeInNewPane(session: ResumeSession): Promise<ResumeOutcome> {
+  const open = findOpenSession(store.state, session.agent, session.id)
+  if (open) {
+    focusOpenSession(open)
+    return { pane: open.number, alreadyOpen: true }
+  }
+  const pane = await startSession(session.projectId, session.agent, session.id, true)
+  return { pane, alreadyOpen: false }
+}
+
+export async function resumeInFocusedPane(session: ResumeSession): Promise<ResumeOutcome> {
+  const state = store.state
+  const open = findOpenSession(state, session.agent, session.id)
+  if (open) {
+    focusOpenSession(open)
+    return { pane: open.number, alreadyOpen: true }
+  }
+  const pane = paneById(state, state.focusedId)
+  if (!pane || pane.projectId !== session.projectId) {
+    if (pane) toast('The focused pane belongs to another project, so the session opened in a new pane.', 'info')
+    return resumeInNewPane(session)
+  }
+  const active = pane.tabs.find((t) => t.id === pane.activeTabId)
+  if (!active) return resumeInNewPane(session)
+  if (active.agent !== 'shell' && active.status !== 'exited') {
+    const project = projectById(state, pane.projectId)?.name ?? 'this project'
+    const confirmed = await confirmDialog({
+      title: `Replace ${active.label}?`,
+      body: `This stops the ${AGENT_NAMES[active.agent]} terminal ${active.label} in ${project} and resumes '${session.title}' in its place. Its files stay on disk.`,
+      confirmLabel: `Replace ${active.label}`
+    })
+    if (!confirmed) return { pane: 0, alreadyOpen: false }
+  }
+  await stopTerminal(active.id)
+  const others = pane.tabs.filter((t) => t.id !== active.id)
+  const tab: TermState = { ...makeTerm(session.agent, others, session.id), resumeChipAt: Date.now() }
+  store.set((s) =>
+    mapPane({ ...s, focusedId: pane.id, view: 'grid', quickPickOpen: false }, pane.id, (p) => ({
+      ...p,
+      tabs: p.tabs.map((t) => (t.id === active.id ? tab : t)),
+      activeTabId: tab.id
+    }))
+  )
+  persistWorkspace()
+  await launch(pane.id, tab.id, true)
+  return { pane: store.state.panes.findIndex((p) => p.id === pane.id) + 1, alreadyOpen: false }
+}
+
+export async function startInFocusedPane(projectId: string, agent: AgentKind | undefined): Promise<number> {
+  const state = store.state
+  const pane = paneById(state, state.focusedId)
+  const project = projectById(state, projectId)
+  if (!pane || !project || pane.projectId !== projectId) return startSession(projectId, agent)
+  await addTab(pane.id, agent ?? agentOf(project))
+  return state.panes.findIndex((p) => p.id === pane.id) + 1
 }

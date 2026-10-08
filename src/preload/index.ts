@@ -30,6 +30,7 @@ const api: GridApi = {
   trackOps: (sessionIds) => ipcRenderer.send(IPC.opsTrack, sessionIds),
   gitChanges: (folder) => ipcRenderer.invoke(IPC.gitChanges, folder),
   listResumable: (agent, folder) => ipcRenderer.invoke(IPC.resumeList, agent, folder),
+  listAllResumable: (query) => ipcRenderer.invoke(IPC.resumeAll, query),
   quickOpen: (kind, folder) => ipcRenderer.invoke(IPC.quickOpen, kind, folder),
   notify: (request) => ipcRenderer.send(IPC.notify, request),
   onNotifyClick: (listener) => subscribe<[string]>(IPC.notifyClick, listener),
@@ -48,6 +49,13 @@ const api: GridApi = {
   openExternal: (url) => ipcRenderer.invoke(IPC.openExternal, url),
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
   checkAgents: (force) => ipcRenderer.invoke(IPC.agentsCheck, force),
+  onCliRun: (listener) => {
+    ipcRenderer.on(IPC.cliRun, (_event, id: number, command) => {
+      void listener(command).then((reply) => ipcRenderer.send(IPC.cliDone, id, reply))
+    })
+  },
+  onCliNotice: (listener) => subscribe<[string, boolean]>(IPC.cliNotice, listener),
+  cliReady: () => ipcRenderer.send(IPC.cliReady),
   onFlushRequest: (listener) => {
     ipcRenderer.on(IPC.flushRequest, () => {
       void listener().finally(() => ipcRenderer.send(IPC.flushDone))

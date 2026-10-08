@@ -6,6 +6,14 @@ files:
   - out/**
   - package.json
   - build/icon.png
+extraResources:
+  - from: build/paneon-cli.cjs
+    to: paneon-cli.cjs
+  - from: build/path-edit.ps1
+    to: path-edit.ps1
+extraFiles:
+  - from: build/paneon.cmd
+    to: paneon.cmd
 asar: true
 asarUnpack:
   - node_modules/node-pty/**
@@ -25,6 +33,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  include: build/installer.nsh
 portable:
   artifactName: Paneon-Portable-${version}.${ext}
 publish:

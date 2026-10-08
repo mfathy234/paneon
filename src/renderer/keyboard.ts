@@ -3,6 +3,7 @@ import {
   closeDetails,
   focusRelative,
   openQuickPick,
+  openResumePicker,
   restoreGrid,
   setPaneFont,
   toggleMaximize,
@@ -46,6 +47,11 @@ function onKeyDown(event: KeyboardEvent): void {
   if (ctrl && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'n') {
     consume(event)
     openQuickPick('other')
+    return
+  }
+  if (ctrl && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'r') {
+    consume(event)
+    openResumePicker()
     return
   }
   if (state.view !== 'grid') return

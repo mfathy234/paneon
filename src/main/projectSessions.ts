@@ -14,7 +14,7 @@ const HEAD_BYTES = 96 * 1024
 const TAIL_BYTES = 48 * 1024
 const CODEX_META_BYTES = 64 * 1024
 
-async function readRange(path: string, start: number, length: number): Promise<string> {
+export async function readRange(path: string, start: number, length: number): Promise<string> {
   const handle = await open(path, 'r')
   try {
     const buffer = Buffer.alloc(length)
@@ -68,7 +68,7 @@ export async function listClaudeSessions(
   return entries
 }
 
-async function listRolloutFiles(root: string): Promise<string[]> {
+export async function listRolloutFiles(root: string): Promise<string[]> {
   const files: string[] = []
   const walk = async (dir: string, depth: number): Promise<void> => {
     let entries

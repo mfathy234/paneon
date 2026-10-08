@@ -36,6 +36,11 @@ export const IPC = {
   bridgeUninstall: 'bridge:uninstall',
   appInfo: 'app:info',
   agentsCheck: 'agents:check',
+  resumeAll: 'resume:all',
+  cliRun: 'cli:run',
+  cliDone: 'cli:done',
+  cliReady: 'cli:ready',
+  cliNotice: 'cli:notice',
   flushRequest: 'app:flush-request',
   flushDone: 'app:flush-done'
 } as const

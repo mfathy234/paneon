@@ -13,6 +13,8 @@ import { OpsWatcher } from './opsWatcher'
 import { bridgeDirs, claudeSettingsPath, legacyUserDataDir, opsDirs } from './paths'
 import { resolveExecutable } from './executables'
 import { migrateLegacyUserData } from './userDataMigration'
+import { CliRunner } from './cliRunner'
+import { startCliServer } from './cliServer'
 
 const IMAGE_SCHEME = 'cg-image'
 const QUIT_KILL_TIMEOUT_MS = 2000
@@ -25,16 +27,18 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 let mainWindow: BrowserWindow | null = null
+let cli: CliRunner | null = null
 
 const gotLock = app.requestSingleInstanceLock()
 
 if (!gotLock) {
   app.exit(0)
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv, workingDirectory) => {
     if (!mainWindow || mainWindow.isDestroyed()) return
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.focus()
+    void cli?.executeFromArgv(argv, workingDirectory)
   })
 }
 
@@ -127,6 +131,10 @@ app.whenReady().then(() => {
   registerImageProtocol(store)
   registerIpc(() => mainWindow, store, ptys, statusWatcher, opsWatcher, warning)
   mainWindow = createWindow()
+  cli = new CliRunner(() => mainWindow)
+  const cliServer = startCliServer((request) => (cli as CliRunner).execute(request))
+  app.on('will-quit', () => cliServer.close())
+  void cli.executeFromArgv(process.argv, process.cwd())
   mainWindow.webContents.once('did-finish-load', () => {
     watcher.start()
     codexWatcher.start()

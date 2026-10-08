@@ -26,6 +26,7 @@ export interface TermState {
   status: 'starting' | 'running' | 'exited'
   exitCode?: number
   resumed?: boolean
+  resumeChipAt?: number
   retried?: boolean
   agentsOpen?: boolean
   command?: string
@@ -39,6 +40,8 @@ export interface PaneState {
   activeTabId: string
   fontSize: number
 }
+
+export type QuickPickMode = 'new' | 'resume'
 
 export type View = 'grid' | 'projects' | 'agents'
 
@@ -81,6 +84,9 @@ export interface AppState {
   collapsedProjects: Record<string, boolean>
   quickPickOpen: boolean
   quickPickPreset: AgentPreset
+  quickPickMode: QuickPickMode
+  resumeProjectId: string | null
+  onboardingOpen: boolean
   themePickerOpen: boolean
   info: AppInfo
 }
@@ -110,6 +116,9 @@ export const initialState = (): AppState => ({
   collapsedProjects: {},
   quickPickOpen: false,
   quickPickPreset: 'default',
+  quickPickMode: 'new',
+  resumeProjectId: null,
+  onboardingOpen: false,
   themePickerOpen: false,
   info: { claudeCommand: 'claude.exe', codexCommand: 'codex', geminiCommand: 'gemini', shellCommand: 'powershell.exe', home: '', userData: '' }
 })

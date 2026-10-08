@@ -1,0 +1,56 @@
+import { createServer, type Server } from 'node:net'
+import { userInfo } from 'node:os'
+import type { CliReply, CliRequest } from '../shared/cli'
+
+const MAX_REQUEST_BYTES = 64 * 1024
+
+export function pipePath(): string {
+  if (process.env.PANEON_PIPE) return process.env.PANEON_PIPE
+  const user = (process.env.USERNAME || userInfo().username || 'user').replace(/[^A-Za-z0-9_.-]/g, '_')
+  return `\\\\.\\pipe\\paneon-${user}`
+}
+
+export function isCliRequest(value: unknown): value is CliRequest {
+  if (typeof value !== 'object' || value === null) return false
+  const request = value as Record<string, unknown>
+  return Array.isArray(request.args) && request.args.every((a) => typeof a === 'string') && typeof request.cwd === 'string'
+}
+
+export function startCliServer(run: (request: CliRequest) => Promise<CliReply>, path: string = pipePath()): Server {
+  const server = createServer((socket) => {
+    let buffer = ''
+    let handled = false
+    const reply = (value: CliReply): void => {
+      socket.end(`${JSON.stringify(value)}\n`)
+    }
+    socket.setEncoding('utf8')
+    socket.on('error', () => undefined)
+    socket.on('data', (chunk: string) => {
+      if (handled) return
+      buffer += chunk
+      if (buffer.length > MAX_REQUEST_BYTES) {
+        handled = true
+        reply({ ok: false, exit: 2, out: 'paneon: request too large.' })
+        return
+      }
+      const end = buffer.indexOf('\n')
+      if (end < 0) return
+      handled = true
+      let request: unknown
+      try {
+        request = JSON.parse(buffer.slice(0, end))
+      } catch {
+        reply({ ok: false, exit: 2, out: 'paneon: could not read the request.' })
+        return
+      }
+      if (!isCliRequest(request)) {
+        reply({ ok: false, exit: 2, out: 'paneon: could not read the request.' })
+        return
+      }
+      run(request).then(reply, (error: unknown) => reply({ ok: false, exit: 1, out: `paneon: ${(error as Error).message}` }))
+    })
+  })
+  server.on('error', () => undefined)
+  server.listen(path)
+  return server
+}

@@ -1,4 +1,4 @@
-import { openQuickPick, toggleThemePicker, zoomAll, showView } from '../actions'
+import { openQuickPick, openResumePicker, toggleThemePicker, zoomAll, showView } from '../actions'
 import { AGENTS, AGENT_NAMES } from '../../shared/agents'
 import type { AgentKind } from '../../shared/types'
 import { ICONS, logoMark } from '../icons'
@@ -121,6 +121,23 @@ export class TopBarComponent {
         `${AGENT_NAMES[agent]} session`
       )
     )
+    const resume = h(
+      'button',
+      {
+        class: 'menu-item menu-resume',
+        type: 'button',
+        role: 'menuitem',
+        id: 'resume-menu-item',
+        onClick: () => {
+          this.closeAgentMenu()
+          openResumePicker()
+        }
+      },
+      icon(ICONS.history),
+      'Resume a session…',
+      h('span', { class: 'kbd' }, 'Ctrl+Shift+R')
+    )
+    items.push(resume)
     const rect = this.newSession.getBoundingClientRect()
     this.agentMenu = h(
       'div',

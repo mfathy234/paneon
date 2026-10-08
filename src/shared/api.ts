@@ -1,4 +1,5 @@
 import type { AgentsReport } from './agentTools'
+import type { CliCommand, CliReply } from './cli'
 import type { OpsSnapshot } from './opsFeed'
 import type {
   AgentKind,
@@ -13,6 +14,8 @@ import type {
   NotifyRequest,
   QuickOpenKind,
   ResumeEntry,
+  ResumeQuery,
+  ResumeSession,
   StatusInfo,
   SessionFile,
   Settings,
@@ -41,6 +44,7 @@ export interface GridApi {
   trackOps(sessionIds: string[]): void
   gitChanges(folder: string): Promise<GitChanges | null>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
+  listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string) => void): () => void
@@ -59,5 +63,8 @@ export interface GridApi {
   openExternal(url: string): Promise<void>
   appInfo(): Promise<AppInfo>
   checkAgents(force: boolean): Promise<AgentsReport>
+  onCliRun(listener: (command: CliCommand) => Promise<CliReply>): void
+  onCliNotice(listener: (text: string, ok: boolean) => void): () => void
+  cliReady(): void
   onFlushRequest(listener: () => Promise<void>): void
 }
