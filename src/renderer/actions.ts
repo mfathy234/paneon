@@ -24,7 +24,7 @@ import {
   toolCommand,
   type TaskPlan
 } from '../shared/agentTools'
-import { decideWhatsNew, entriesUpTo } from '../shared/changelog'
+import { decideWhatsNew, effectiveLastSeen, entriesUpTo } from '../shared/changelog'
 import { showUpdatePill, type UpdateState } from '../shared/updates'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
@@ -560,7 +560,9 @@ export function closeWhatsNew(): void {
 
 export function initWhatsNew(): void {
   const { info, settings } = store.state
-  const decision = decideWhatsNew(info.version, settings.lastSeenVersion, CHANGELOG_ENTRIES)
+  const hasExistingData = settings.projects.length > 0
+  const lastSeen = effectiveLastSeen(settings.lastSeenVersion, hasExistingData)
+  const decision = decideWhatsNew(info.version, lastSeen, CHANGELOG_ENTRIES)
   if (decision.show) {
     store.patch({ whatsNew: { version: info.version, from: decision.from, entries: decision.entries } })
   } else if (decision.record) {

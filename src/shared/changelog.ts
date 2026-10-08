@@ -68,6 +68,12 @@ export type WhatsNewDecision =
   | { show: false; record: string | null }
   | { show: true; from: string; entries: ChangelogEntry[] }
 
+export const LEGACY_BASELINE_VERSION = '0.3.0'
+
+export function effectiveLastSeen(lastSeen: string | null, hasExistingData: boolean): string | null {
+  return lastSeen ?? (hasExistingData ? LEGACY_BASELINE_VERSION : null)
+}
+
 export function decideWhatsNew(current: string, lastSeen: string | null, entries: ChangelogEntry[]): WhatsNewDecision {
   if (!isVersion(current)) return { show: false, record: null }
   if (!lastSeen || !isVersion(lastSeen)) return { show: false, record: current }

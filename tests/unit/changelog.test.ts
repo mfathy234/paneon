@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { decideWhatsNew, entriesUpTo, entryToMarkdown, parseChangelog } from '../../src/shared/changelog'
+import {
+  decideWhatsNew,
+  effectiveLastSeen,
+  entriesUpTo,
+  entryToMarkdown,
+  parseChangelog
+} from '../../src/shared/changelog'
 import { extractSection } from '../../scripts/changelogSection.mjs'
 
 const SAMPLE = `# Changelog
@@ -122,6 +128,27 @@ describe('decideWhatsNew', () => {
 
   it('ignores a corrupt stored version', () => {
     expect(decideWhatsNew('0.4.0', 'banana', entries)).toEqual({ show: false, record: '0.4.0' })
+  })
+
+  it('shows the new version to a manual upgrade from 0.3.0 that has no stored version', () => {
+    const decision = decideWhatsNew('0.4.0', effectiveLastSeen(null, true), entries)
+    expect(decision.show).toBe(true)
+    if (decision.show) expect(decision.entries.map((e) => e.version)).toEqual(['0.4.0'])
+  })
+})
+
+describe('effectiveLastSeen', () => {
+  it('returns the stored version when present', () => {
+    expect(effectiveLastSeen('0.2.0', true)).toBe('0.2.0')
+    expect(effectiveLastSeen('0.2.0', false)).toBe('0.2.0')
+  })
+
+  it('falls back to 0.3.0 when missing but the install already has data', () => {
+    expect(effectiveLastSeen(null, true)).toBe('0.3.0')
+  })
+
+  it('returns null when missing on a fresh install', () => {
+    expect(effectiveLastSeen(null, false)).toBeNull()
   })
 })
 

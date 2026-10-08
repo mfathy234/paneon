@@ -17,6 +17,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Taskbar and notifications now show Paneon's own icon and name.
+- Upgrading by hand from 0.3.0 now shows this What's new dialog too.
 
 ## [0.3.0] - 2026-10-08
 
