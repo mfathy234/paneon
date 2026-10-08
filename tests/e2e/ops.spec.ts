@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { closeApp, closeBounded, createSandbox, launchApp, type Sandbox } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex) session in Smoke$/
@@ -176,6 +176,6 @@ test('details panel without a snapshot explains what the ops mod adds', async ()
     await expect(details).toContainText('The ops mod adds plan, agents, files and checks to this panel.')
     await expect(page.locator('.agents-toggle')).toHaveCount(0)
   } finally {
-    await closeApp(app)
+    await closeBounded(app)
   }
 })

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, createSandbox, feedTerminal, launchApp, QUIT_BUDGET_MS, type Sandbox } from './helpers'
+import { activeTermId, bufferText, closeApp, closeBounded, createSandbox, feedTerminal, launchApp, QUIT_BUDGET_MS, type Sandbox } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -129,7 +129,7 @@ test('settings.json that does not parse is reported inline and left untouched', 
     await expect(page.locator('#bridge-toggle')).not.toBeChecked()
     expect(readFileSync(join(sandbox.claudeHome, 'settings.json'), 'utf8')).toBe('{ "broken": ,, }')
   } finally {
-    await closeApp(app)
+    await closeBounded(app)
   }
 })
 
@@ -205,7 +205,7 @@ test('turning notifications off silences them', async () => {
     await expect(page.locator('.pane').nth(0)).toHaveAttribute('data-attention', 'done', { timeout: 15_000 })
     expect(readLines(sandbox.notifyLog)).toHaveLength(0)
   } finally {
-    await closeApp(app)
+    await closeBounded(app)
   }
 })
 
@@ -302,7 +302,7 @@ test('Codex panes show the model and context from the rollout and no cost', asyn
     await expect(page.locator('.pane-info .info-cost')).toHaveCount(0)
     await page.screenshot({ path: join(SCREENS, '17-codex-info.png') })
   } finally {
-    await closeApp(app)
+    await closeBounded(app)
   }
 })
 
@@ -337,6 +337,6 @@ test('Gemini panes take title and model from the chat file of their own session 
     const row = page.locator('.rp-row', { hasText: 'Plan the release notes' })
     await expect(row.locator('.agent-mark.gemini')).toHaveCount(1)
   } finally {
-    await closeApp(app)
+    await closeBounded(app)
   }
 })

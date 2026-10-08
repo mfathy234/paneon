@@ -123,6 +123,12 @@ export async function closeApp(app: ElectronApplication): Promise<number> {
   return elapsed
 }
 
+export async function closeBounded(app: ElectronApplication): Promise<void> {
+  const proc = app.process()
+  await Promise.race([app.close().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 20_000))])
+  if (proc.exitCode === null) proc.kill()
+}
+
 export interface CliResult {
   code: number | null
   out: string
