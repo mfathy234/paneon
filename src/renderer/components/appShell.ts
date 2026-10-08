@@ -5,6 +5,7 @@ import { AgentsViewComponent } from './agentsView'
 import { GridComponent } from './grid'
 import { ProjectsViewComponent } from './projectsView'
 import { OnboardingComponent } from './onboarding'
+import { PaletteComponent } from './palette'
 import { QuickPickComponent } from './quickpick'
 import { ResumePickerComponent } from './resumePicker'
 import { SidebarComponent } from './sidebar'
@@ -26,6 +27,7 @@ export class AppShell {
   private readonly themePicker = new ThemePickerComponent(() => this.topbar.themeButton)
   private readonly updatePopover = new UpdatePopoverComponent(() => this.topbar.updatePill)
   private readonly whatsNew = new WhatsNewComponent()
+  private readonly palette = new PaletteComponent()
   private lastView: AppState['view'] = 'grid'
 
   constructor() {
@@ -51,5 +53,6 @@ export class AppShell {
     this.themePicker.update(state)
     this.updatePopover.update(state)
     this.whatsNew.update(state)
+    this.palette.update(state)
   }
 }

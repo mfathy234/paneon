@@ -95,6 +95,7 @@ export interface AppState {
   quickPickMode: QuickPickMode
   resumeProjectId: string | null
   onboardingOpen: boolean
+  paletteOpen: boolean
   themePickerOpen: boolean
   update: UpdateState
   updatePopoverOpen: boolean
@@ -130,6 +131,7 @@ export const initialState = (): AppState => ({
   quickPickMode: 'new',
   resumeProjectId: null,
   onboardingOpen: false,
+  paletteOpen: false,
   themePickerOpen: false,
   update: initialUpdateState(),
   updatePopoverOpen: false,

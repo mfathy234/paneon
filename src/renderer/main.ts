@@ -24,6 +24,7 @@ import { installOps } from './ops'
 import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
+import { installBuiltinCommands } from './commands/builtin'
 import { installKeyboard } from './keyboard'
 import { store } from './state'
 import { applyBundleToAll, connectPtyStreams, setTerminalEvents } from './terminals'
@@ -83,6 +84,7 @@ async function boot(): Promise<void> {
   document.addEventListener('visibilitychange', () => void refreshGitChanges())
   installAttention()
   void installOps()
+  installBuiltinCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)
   initWhatsNew()

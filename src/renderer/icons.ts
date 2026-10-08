@@ -20,6 +20,9 @@ export const ICONS = {
   chevronRight: svg(14, '<polyline points="9 18 15 12 9 6"/>'),
   chevronUp: svg(14, '<polyline points="18 15 12 9 6 15"/>'),
   chevronDown: svg(14, '<polyline points="6 9 12 15 18 9"/>'),
+  bolt: svg(14, '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>'),
+  snippet: svg(14, '<path d="M5 6h14 M5 12h14 M5 18h9"/>'),
+  layout: svg(14, '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16 M3 12h9"/>'),
   palette: svg(16, '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/><path d="M12 21a2 2 0 0 1-2-2c0-1.5 1-1.5 1-3a2 2 0 0 1 2-2h3"/>')
 }
 

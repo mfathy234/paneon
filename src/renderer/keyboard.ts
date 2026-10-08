@@ -1,18 +1,27 @@
 import { DEFAULT_FONT_SIZE } from '../shared/types'
-import {
-  closeDetails,
-  focusRelative,
-  openQuickPick,
-  openResumePicker,
-  restoreGrid,
-  setPaneFont,
-  toggleMaximize,
-  zoomPane
-} from './actions'
+import { DEFAULT_PALETTE_SHORTCUT } from '../shared/settingsSchema'
+import { bind, formatShortcut, matchesBinding, parseShortcut, type KeyBinding, type KeyEventLike } from '../shared/shortcuts'
+import { closeDetails, openPalette, restoreGrid, setPaneFont, zoomPane } from './actions'
+import { commandForEvent } from './commands/registry'
 import { derivePanes } from './derive'
-import { store } from './state'
+import { store, type AppState } from './state'
 
 const overlayOpen = (): boolean => document.querySelector('.overlay, .popover') !== null
+
+const ALTERNATE_PALETTE = bind('Ctrl+Shift+P')
+
+function paletteBindings(state: AppState): KeyBinding[] {
+  const configured = parseShortcut(state.settings.paletteShortcut) ?? bind(DEFAULT_PALETTE_SHORTCUT)
+  return [configured, ALTERNATE_PALETTE]
+}
+
+export function isPaletteShortcut(event: KeyEventLike, state: AppState): boolean {
+  return paletteBindings(state).some((binding) => matchesBinding(event, binding))
+}
+
+export function paletteShortcutLabel(state: AppState): string {
+  return formatShortcut(paletteBindings(state)[0])
+}
 
 function zoomDelta(event: KeyboardEvent): number | 'reset' | null {
   if (event.key === '=' || event.key === '+' || event.code === 'NumpadAdd') return 1
@@ -38,39 +47,25 @@ function consume(event: KeyboardEvent): void {
 function onKeyDown(event: KeyboardEvent): void {
   if (event.isComposing || overlayOpen()) return
   const state = store.state
-  const ctrl = event.ctrlKey && !event.metaKey
-  if (ctrl && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'n') {
+  if (isPaletteShortcut(event, state)) {
     consume(event)
-    openQuickPick()
+    openPalette()
     return
   }
-  if (ctrl && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'n') {
+  const command = commandForEvent(event, state)
+  if (command) {
     consume(event)
-    openQuickPick('other')
-    return
-  }
-  if (ctrl && !event.altKey && event.shiftKey && event.key.toLowerCase() === 'r') {
-    consume(event)
-    openResumePicker()
+    void command.run()
     return
   }
   if (state.view !== 'grid') return
-  if (ctrl && !event.altKey && event.key === 'Enter') {
-    consume(event)
-    toggleMaximize()
-    return
-  }
-  if (ctrl && event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-    consume(event)
-    focusRelative(event.key === 'ArrowLeft' ? -1 : 1)
-    return
-  }
   if (event.key === 'Escape' && escapeShouldRestore(event)) {
     consume(event)
     if (state.detailsPaneId !== null) closeDetails()
     else restoreGrid()
     return
   }
+  const ctrl = event.ctrlKey && !event.metaKey
   const zoom = ctrl && !event.altKey ? zoomDelta(event) : null
   if (zoom !== null && state.focusedId) {
     consume(event)

@@ -2481,3 +2481,148 @@ input[type='checkbox'] {
 #wn-show-older {
   align-self: flex-start;
 }
+
+.palette-overlay {
+  align-items: flex-start;
+  padding-top: 80px;
+}
+
+.palette {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.palette-head {
+  height: 52px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.palette-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.palette-input:focus-visible {
+  outline: none;
+}
+
+.palette-input::placeholder {
+  color: var(--muted);
+}
+
+.palette-kbd {
+  flex: none;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 6px;
+  overflow-y: auto;
+}
+
+.palette-group {
+  padding: 10px 16px 4px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.palette-row {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 6px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.palette-row.selected {
+  background: var(--raised);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.palette-lead {
+  flex: none;
+  display: inline-flex;
+  min-width: 20px;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.palette-row.selected .palette-lead {
+  color: var(--accent);
+}
+
+.palette-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-match {
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.palette-hint {
+  flex: none;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.palette-empty {
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--muted);
+}
+
+.palette-foot {
+  height: 36px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -14,6 +14,13 @@ describe('migrateSettings', () => {
     expect(migrateSettings({ onboardingDismissed: true }).onboardingDismissed).toBe(true)
   })
 
+  it('keeps a valid palette shortcut in a normal form and falls back to Ctrl+K otherwise', () => {
+    expect(migrateSettings({}).paletteShortcut).toBe('Ctrl+K')
+    expect(migrateSettings({ paletteShortcut: 'ctrl+alt+p' }).paletteShortcut).toBe('Ctrl+Alt+P')
+    expect(migrateSettings({ paletteShortcut: 'P' }).paletteShortcut).toBe('Ctrl+K')
+    expect(migrateSettings({ paletteShortcut: 42 }).paletteShortcut).toBe('Ctrl+K')
+  })
+
   it('returns defaults for junk input', () => {
     expect(migrateSettings(null)).toEqual(defaultSettings())
     expect(migrateSettings('x')).toEqual(defaultSettings())

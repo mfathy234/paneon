@@ -1,5 +1,6 @@
 import { isAgent } from './agents'
 import { DEFAULT_THEME_ID } from './themes'
+import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
 import {
   DEFAULT_FONT_SIZE,
@@ -30,6 +31,8 @@ const makeId = (): string => {
   return `p-${Date.now().toString(36)}-${idCounter}`
 }
 
+export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
+
 export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null, dim: 60, blur: 0 })
 
 export const defaultSettings = (): Settings => ({
@@ -41,7 +44,8 @@ export const defaultSettings = (): Settings => ({
   onboardingDismissed: false,
   workspace: { panes: [], focusedIndex: 0 },
   lastSeenVersion: null,
-  autoUpdateCheck: true
+  autoUpdateCheck: true,
+  paletteShortcut: DEFAULT_PALETTE_SHORTCUT
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -110,6 +114,11 @@ function sanitizeWorkspace(value: unknown, projectIds: Set<string>): Workspace {
   return { panes, focusedIndex }
 }
 
+function sanitizeShortcut(value: unknown): string {
+  const binding = typeof value === 'string' ? parseShortcut(value) : null
+  return binding ? formatShortcut(binding) : DEFAULT_PALETTE_SHORTCUT
+}
+
 export function migrateSettings(raw: unknown): Settings {
   const defaults = defaultSettings()
   if (!isRecord(raw)) return defaults
@@ -128,6 +137,7 @@ export function migrateSettings(raw: unknown): Settings {
     onboardingDismissed: raw.onboardingDismissed === true,
     workspace: sanitizeWorkspace(raw.workspace, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
-    autoUpdateCheck: raw.autoUpdateCheck !== false
+    autoUpdateCheck: raw.autoUpdateCheck !== false,
+    paletteShortcut: sanitizeShortcut(raw.paletteShortcut)
   }
 }

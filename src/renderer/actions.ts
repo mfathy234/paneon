@@ -491,6 +491,14 @@ export function setQuickPickMode(mode: AppState['quickPickMode']): void {
   store.patch({ quickPickMode: mode })
 }
 
+export function openPalette(): void {
+  store.patch({ paletteOpen: true, quickPickOpen: false, themePickerOpen: false, updatePopoverOpen: false })
+}
+
+export function closePalette(): void {
+  if (store.state.paletteOpen) store.patch({ paletteOpen: false })
+}
+
 export function openOnboarding(): void {
   store.patch({ onboardingOpen: true, themePickerOpen: false, quickPickOpen: false })
 }

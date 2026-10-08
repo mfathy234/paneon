@@ -56,6 +56,7 @@ export interface Settings {
   workspace: Workspace
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
+  paletteShortcut: string
 }
 
 export interface SettingsLoadResult {
