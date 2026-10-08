@@ -21,7 +21,9 @@
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Plans and sub-agents at a glance.** With the optional ops feed, panes show plan progress and a drawer of running sub-agents; a details panel shows context, limits, changed files and the last build and test result.
-- **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. A **Resume session** menu lists recent sessions per project.
+- **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
+- **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, or `paneon ls` to list your projects, all from the terminal you already have open.
+- **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab.
 - **Themes.** Eight themes (Grid Dark, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
@@ -35,6 +37,12 @@
 | ![The projects view](docs/screenshots/projects.png) | ![The agents view with install and update buttons](docs/screenshots/agents.png) |
 
 ![The theme picker open over the grid](docs/screenshots/themes.png)
+
+| Resume picker | First run |
+|---|---|
+| ![The resume picker listing sessions of all three agents with a preview of the selected one](docs/screenshots/resume-picker.png) | ![The Set up Paneon dialog with two steps, add a project and install your agents](docs/screenshots/onboarding.png) |
+
+![A PowerShell window running paneon ls, paneon start and paneon sessions next to the Paneon grid. The image is a composite of a real app screenshot and the real output of those commands.](docs/screenshots/cli.png)
 
 ## Supported agents
 
@@ -53,11 +61,17 @@ Paneon only reads the agents' own folders. It never writes to `~/.codex` or `~/.
 
 Requirements: Windows 10 or 11 (x64). Node.js 20+ is only needed for installing Codex and Gemini through the Agents view.
 
+The installer also puts the `paneon` command on your user PATH (open a new terminal after installing) and removes it again on uninstall. The portable build does not touch your PATH: run `Paneon-Portable-<version>.exe` directly, or copy it somewhere and add that folder to your PATH yourself. Arguments given to the portable exe are forwarded to the running Paneon, but its answers appear as a toast in the app instead of in the terminal.
+
 ## First run
+
+On a fresh install Paneon opens **Set up Paneon** with two steps: add a project (a folder picker) and install your agents (it shows which CLIs it found and has an **Open Agents** button). **Skip** or **Done** closes it for good; **Getting started** in the Theme popover reopens it. You can also do the steps by hand:
 
 1. Open **Projects** (top bar) and add a project: a name and a folder. Choose each project's default agent.
 2. Sign in once to each agent you use, in any terminal: `claude`, `codex`, `gemini`. Paneon never handles your credentials.
 3. Press **Ctrl+N** (or click a project) to start a session. If an agent is not installed, open **Agents** and click **Install**.
+
+Tip: run `paneon .` in any folder to open it in Paneon.
 
 ## Using it
 
@@ -67,6 +81,7 @@ Requirements: Windows 10 or 11 (x64). Node.js 20+ is only needed for installing 
 |---|---|
 | Ctrl+N | New session. Quick-pick: type to filter, arrows, Enter, Esc; **Tab** cycles Claude, Codex, Gemini for the highlighted project |
 | Ctrl+Shift+N | Same quick-pick, preset to the agent after each project's default |
+| Ctrl+Shift+R | Open the picker in **Resume** mode. Inside the picker, **Ctrl+R** toggles New / Resume, **Tab** cycles the agent filter, Enter resumes in a new pane, Shift+Enter resumes in the focused pane (after a confirmation if that tab is a running agent) |
 | Ctrl+Enter, double-click header | Maximize or restore the focused pane |
 | Esc | Restore the grid (while a Claude pane is busy, Esc goes to Claude instead) |
 | Ctrl+Alt+Left / Right | Focus the previous / next pane |
@@ -85,6 +100,33 @@ Requirements: Windows 10 or 11 (x64). Node.js 20+ is only needed for installing 
 | 4 | 2 x 2 |
 | 5-6 | 3 x 2 |
 | 7+ | 3 columns, the grid scrolls |
+
+### Resuming a session
+
+Press **Ctrl+Shift+R**, choose **Resume a session...** in the split-button menu, or choose **Resume in <project>...** in a project's menu in the sidebar. The list shows up to 50 sessions from Claude Code, Codex CLI and Gemini CLI for your projects, newest first, grouped as Today, Yesterday, This week and Older. Each row shows the agent, title, project, age and message count, and **open in pane N** when the session is already running (Enter then focuses that pane instead of starting a second copy). The right side previews the selected session: agent and model, folder, start and last activity, the first prompt and the last assistant message. A resumed pane carries a muted **resumed** chip for its first minute or until you type into it. Sessions are read from the agents' own folders, are loaded in the background and cached by file size and modification time.
+
+### The paneon command
+
+`paneon` talks to the running app over a local named pipe (`\\.\pipe\paneon-<user>`) and starts Paneon first if it is not running. Nothing stays in the background when Paneon is closed. It prints to the terminal you ran it in and exits non-zero on errors.
+
+| Command | What it does |
+|---|---|
+| `paneon` or `paneon open` | Open Paneon, or bring it to the front |
+| `paneon .` | Add the current folder as a project if it is new (name = folder name, default agent Claude) and start its default agent in a new pane |
+| `paneon start <project\|path> [--agent claude\|codex\|gemini] [--here]` | Start a session; a path is added as a project if it is new. `--here` opens it as a tab in the focused pane when that pane belongs to the project |
+| `paneon resume [project] [--last] [--agent <agent>]` | Open the resume picker for a project (default: the project of the current folder), or with `--last` resume the newest matching session |
+| `paneon ls` | List projects with their default agent, folder and open session count |
+| `paneon sessions [project]` | List earlier sessions: agent, title, last activity, short id |
+| `paneon add <path> [--name <name>]` | Add a project |
+| `paneon update-agents` | Update the installed agents in a visible shell tab |
+| `paneon --help`, `paneon --version` | Usage and version |
+
+```
+PS C:\work\acme-web> paneon start billing-api --agent codex
+billing-api: started Codex in pane 3
+PS C:\work\acme-web> paneon resume --last --agent claude
+Resumed 'Add dark mode toggle' (Claude Code) in pane 4
+```
 
 ### Closing
 
@@ -153,19 +195,25 @@ The end-to-end tests launch the built app with a temporary user-data folder and 
 | `PANEON_CLAUDE_HOME` | Use another folder instead of `%USERPROFILE%\.claude`. |
 | `PANEON_CODEX_HOME`, `PANEON_GEMINI_HOME` | Read Codex or Gemini sessions from another folder. |
 | `PANEON_OPS_DIR` | Read ops snapshots from this folder only. |
+| `PANEON_PIPE` | Name of the named pipe the `paneon` command uses (default `\\.\pipe\paneon-<user>`); set it to run a second, isolated instance. |
+| `PANEON_EXE`, `PANEON_APP_ARGS` | The `paneon` command: program and JSON array of arguments used to start the app when no pipe answers (default: the Paneon exe itself). |
 | `PANEON_OPEN_LOG`, `PANEON_NOTIFY_LOG` | Tests: append open-in-editor and notification requests to a file instead of acting on them. |
 
 ## Project layout
 
 ```
 src/shared     types, agents, settings schema, layout, session matching, status-line and ops-feed parsing,
-               agent install/update logic, needs-you state machine, themes, contrast
+               agent install/update logic, needs-you state machine, themes, contrast, resume index and
+               session details, command-line parsing and command handling
 src/main       window, pty manager, agent launch, settings store, user-data migration, watchers, status-line bridge,
-               agent version checks, resume lists, git, notifications, IPC
+               agent version checks, resume lists and the cross-project session index, git, notifications,
+               command-line pipe server and runner, IPC
 src/preload    typed bridge exposed as window.gridApi
-src/renderer   app shell, sidebar, grid, pane, quick-pick, projects and agents views, theme picker, dialogs
+src/renderer   app shell, sidebar, grid, pane, quick-pick, resume picker, onboarding, projects and agents views,
+               theme picker, dialogs, command host
+build          icons, the paneon launcher (paneon.cmd, paneon-cli.cjs) and the installer PATH script
 tests/unit     vitest
-tests/e2e      Playwright _electron tests (temp user-data, fake agent commands)
+tests/e2e      Playwright _electron tests (temp user-data, fake agent commands, the paneon command over a test pipe)
 tests/screenshots  the harness behind docs/screenshots
 scripts        icon generation
 ```
