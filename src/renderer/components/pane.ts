@@ -16,7 +16,8 @@ import {
 } from '../actions'
 import type { PaneView } from '../derive'
 import { clear, h, icon, iconButton } from '../dom'
-import { sessionLabel } from '../../shared/agents'
+import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
+import { continueIn, continueLabel } from '../handoffActions'
 import type { TabAgent } from '../../shared/types'
 import { AgentsDrawer } from './agentsDrawer'
 import { buildDetails } from './opsDetails'
@@ -34,6 +35,7 @@ export class PaneComponent {
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
   private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
   private readonly compareChip = h('span', { class: 'chip chip-compare', hidden: true })
+  private readonly fromChip = h('span', { class: 'chip chip-from', hidden: true })
   private readonly branch = h('span', { class: 'chip', hidden: true })
   private readonly branchName = h('span', { class: 'chip-text' })
   private readonly statusWord = h('span', { class: 'status' })
@@ -63,6 +65,7 @@ export class PaneComponent {
       this.fresh,
       this.resumed,
       this.compareChip,
+      this.fromChip,
       this.branch,
       this.statusWord,
       this.attentionWord,
@@ -100,6 +103,9 @@ export class PaneComponent {
     this.fresh.hidden = view.named
     const chipAt = view.pane.tabs.find((t) => t.id === view.pane.activeTabId)?.resumeChipAt
     this.resumed.hidden = chipAt === undefined || Math.max(view.now, Date.now()) - chipAt >= RESUMED_CHIP_MS
+    const origin = view.pane.tabs.find((t) => t.id === view.primaryTabId)?.from
+    this.fromChip.hidden = !origin
+    this.fromChip.textContent = origin ? `from ${AGENT_NAMES[origin]}` : ''
     const link = view.pane.compare
     this.compareChip.hidden = !link
     this.compareChip.textContent = link ? link.slot.toUpperCase() : ''
@@ -175,6 +181,15 @@ export class PaneComponent {
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => run(action) }, text)
     const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'))
     const showDetails = item('Details', () => openDetails(this.paneId))
+    const source = this.current?.agent ?? 'shell'
+    const handoffs =
+      source === 'shell'
+        ? []
+        : AGENTS.filter((agent) => agent !== source).map((agent) => {
+            const entry = item(continueLabel(agent), () => continueIn(this.paneId, agent))
+            entry.prepend(...[agentMark(agent)].filter((mark): mark is HTMLElement => mark !== null))
+            return entry
+          })
     this.actionsMenu = h(
       'div',
       { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
@@ -182,7 +197,8 @@ export class PaneComponent {
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer')),
       item('Open terminal here', () => addTab(this.paneId, 'shell')),
       item('Show diff', () => showPaneDiff(this.paneId)),
-      showDetails
+      showDetails,
+      ...handoffs
     )
     this.actionsMenu.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return

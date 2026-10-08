@@ -1,5 +1,5 @@
 import { LAYOUT_NAME_MAX, MAX_LAYOUTS } from './settingsSchema'
-import type { CompareLink, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
+import type { AgentKind, CompareLink, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
 
 export interface SnapshotTab {
   id: string
@@ -7,6 +7,7 @@ export interface SnapshotTab {
   label: string
   sessionId?: string
   agentsOpen?: boolean
+  from?: AgentKind
   task?: unknown
 }
 
@@ -47,7 +48,8 @@ export function snapshotWorkspace(
           agent: tab.agent,
           label: tab.label,
           sessionId: tab.agent === 'shell' || detached ? undefined : sessionFor(tab),
-          agentsOpen: tab.agentsOpen === true ? true : undefined
+          agentsOpen: tab.agentsOpen === true ? true : undefined,
+          from: tab.from
         }))
       }
       if (options.portable !== true) {

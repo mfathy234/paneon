@@ -26,6 +26,7 @@ export const IPC = {
   opsUpdate: 'ops:update',
   opsTrack: 'ops:track',
   gitChanges: 'git:changes',
+  gitFiles: 'git:files',
   resumeList: 'resume:list',
   quickOpen: 'shell:quick-open',
   notify: 'app:notify',

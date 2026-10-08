@@ -681,7 +681,7 @@ export async function removeProject(projectId: string): Promise<void> {
 export function buildPane(saved: SavedPane, project: Project): PaneState {
   const tabs: TermState[] = []
   for (const tab of saved.tabs) {
-    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, agentsOpen: tab.agentsOpen })
+    tabs.push({ ...makeTerm(tab.agent, tabs, tab.sessionId), label: tab.label, agentsOpen: tab.agentsOpen, from: tab.from })
   }
   return {
     id: newId(),

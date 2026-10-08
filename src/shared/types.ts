@@ -45,6 +45,7 @@ export interface SavedTab {
   label: string
   sessionId?: string
   agentsOpen?: boolean
+  from?: AgentKind
 }
 
 export interface SavedPane {

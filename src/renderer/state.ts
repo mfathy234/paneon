@@ -34,6 +34,7 @@ export interface TermState {
   agentsOpen?: boolean
   command?: string
   prompt?: string
+  from?: AgentKind
   task?: { agents: AgentKind[]; before: ToolReport[] }
 }
 

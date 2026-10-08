@@ -15,7 +15,7 @@ import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { notifyUser, quickOpen } from './desktop'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
-import { currentBranch, gitChanges } from './git'
+import { changedFiles, currentBranch, gitChanges } from './git'
 import { checkAgentTools } from './agentTools'
 import { bridgeDirs, claudeSettingsPath } from './paths'
 import { listAllSessions } from './sessionIndex'
@@ -78,6 +78,7 @@ export function registerIpc(
     ops.track(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [])
   })
   ipcMain.handle(IPC.gitChanges, (_event, folder: string) => gitChanges(folder))
+  ipcMain.handle(IPC.gitFiles, (_event, folder: string) => changedFiles(folder))
   ipcMain.handle(IPC.resumeList, (_event, agent: AgentKind, folder: string) =>
     agent === 'codex' ? listCodexSessions(folder) : agent === 'gemini' ? listGeminiSessions(folder) : listClaudeSessions(folder)
   )

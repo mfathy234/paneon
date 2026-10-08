@@ -2962,3 +2962,34 @@ input[type='checkbox'] {
 .compare-slot .pane-fresh {
   display: none;
 }
+
+.chip-from {
+  font-family: inherit;
+  font-style: italic;
+}
+
+.handoff-dialog {
+  width: 680px;
+}
+
+.handoff-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.handoff-head h2 {
+  margin: 0;
+}
+
+.handoff-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.handoff-text {
+  min-height: 260px;
+  font-size: 12px;
+}

@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { parseShortstat } from '../shared/gitChanges'
+import { parseNumstat } from '../shared/handoff'
 import type { GitChanges } from '../shared/types'
 
 const CHANGES_TTL_MS = 5000
@@ -31,4 +32,14 @@ export async function gitChanges(folder: string): Promise<GitChanges | null> {
   }
   changesCache.set(folder, { at: Date.now(), value })
   return value
+}
+
+export async function changedFiles(folder: string): Promise<string[] | null> {
+  const inside = await run(['rev-parse', '--is-inside-work-tree'], folder)
+  if (inside !== 'true') return null
+  const tracked = await run(['diff', 'HEAD', '--numstat'], folder)
+  const untracked = await run(['ls-files', '--others', '--exclude-standard'], folder)
+  const files = new Set(tracked ? parseNumstat(tracked) : [])
+  for (const path of (untracked ?? '').split('\n')) if (path.trim()) files.add(path.trim())
+  return [...files]
 }

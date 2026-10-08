@@ -26,6 +26,7 @@ import { toast } from './components/toast'
 import { runCliCommand } from './cliHost'
 import { installBuiltinCommands } from './commands/builtin'
 import { installCompareCommands } from './commands/compare'
+import { installHandoffCommands } from './commands/handoff'
 import { installLayoutCommands } from './commands/layouts'
 import { installSnippetCommands } from './commands/snippets'
 import { installKeyboard } from './keyboard'
@@ -90,6 +91,7 @@ async function boot(): Promise<void> {
   installBuiltinCommands()
   installLayoutCommands()
   installCompareCommands()
+  installHandoffCommands()
   installSnippetCommands()
   installKeyboard()
   api.onUpdateState(setUpdateState)

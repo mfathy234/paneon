@@ -30,6 +30,7 @@ const api: GridApi = {
   onOps: (listener) => subscribe<[OpsSnapshot[]]>(IPC.opsUpdate, listener),
   trackOps: (sessionIds) => ipcRenderer.send(IPC.opsTrack, sessionIds),
   gitChanges: (folder) => ipcRenderer.invoke(IPC.gitChanges, folder),
+  gitFiles: (folder) => ipcRenderer.invoke(IPC.gitFiles, folder),
   listResumable: (agent, folder) => ipcRenderer.invoke(IPC.resumeList, agent, folder),
   listAllResumable: (query) => ipcRenderer.invoke(IPC.resumeAll, query),
   quickOpen: (kind, folder) => ipcRenderer.invoke(IPC.quickOpen, kind, folder),

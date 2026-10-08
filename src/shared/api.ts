@@ -49,6 +49,7 @@ export interface GridApi {
   onOps(listener: (snapshots: OpsSnapshot[]) => void): () => void
   trackOps(sessionIds: string[]): void
   gitChanges(folder: string): Promise<GitChanges | null>
+  gitFiles(folder: string): Promise<string[] | null>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
