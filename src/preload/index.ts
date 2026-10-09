@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { GridApi } from '../shared/api'
 import { IPC } from '../shared/ipc'
 import type { OpsSnapshot } from '../shared/opsFeed'
@@ -16,6 +16,7 @@ const api: GridApi = {
   updateSettings: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
   pickFolder: () => ipcRenderer.invoke(IPC.pickFolder),
   pickImage: () => ipcRenderer.invoke(IPC.pickImage),
+  pathForFile: (file) => webUtils.getPathForFile(file),
   checkFolder: (path) => ipcRenderer.invoke(IPC.checkFolder, path),
   gitBranch: (folder) => ipcRenderer.invoke(IPC.gitBranch, folder),
   listSessions: () => ipcRenderer.invoke(IPC.sessionsList),

@@ -1,3 +1,4 @@
+import { stepContextNotice, type ContextNotice } from '../shared/contextWarning'
 import { initialAttention, stepAttention, type Attention, type AttentionMemory } from '../shared/attention'
 import { detectPermissionPrompt } from '../shared/permissionPrompt'
 import { api } from './api'
@@ -11,6 +12,7 @@ const PROMPT_TAIL_ROWS = 24
 const CLOCK_MS = 15_000
 
 const memories = new Map<string, AttentionMemory>()
+const contextMemories = new Map<string, ContextNotice>()
 
 function paneVisible(state: AppState, view: PaneView): boolean {
   if (state.view !== 'grid') return false
@@ -22,6 +24,20 @@ function notifyText(view: PaneView, kind: 'done' | 'needs'): { title: string; bo
   return kind === 'done'
     ? { title: `${view.title} is done`, body: `${project}: the session finished and is waiting for you.` }
     : { title: `${view.title} needs you`, body: `${project}: the session is waiting on a permission prompt.` }
+}
+
+function notifyContext(state: AppState, view: PaneView): void {
+  const key = view.primaryTabId
+  const unseen = !state.windowFocused || !paneVisible(state, view)
+  const step = stepContextNotice(contextMemories.get(key) ?? { notified: false }, view.info.contextPercent, unseen)
+  contextMemories.set(key, step.memory)
+  if (!step.notify || !state.settings.sessionInfo.notifications || view.info.contextPercent === null) return
+  api.notify({
+    paneId: view.pane.id,
+    title: `${view.title} context is ${Math.round(view.info.contextPercent)}% full`,
+    body: `${view.project?.name ?? 'Paneon'}: /compact or start a fresh session.`,
+    sound: state.settings.sessionInfo.sound
+  })
 }
 
 function evaluate(state: AppState): void {
@@ -37,6 +53,7 @@ function evaluate(state: AppState): void {
       windowFocused: state.windowFocused
     })
     memories.set(paneId, step.memory)
+    notifyContext(state, view)
     next[paneId] = step.memory.attention
     if (step.notify && state.settings.sessionInfo.notifications) {
       api.notify({ paneId, ...notifyText(view, step.notify), sound: state.settings.sessionInfo.sound })

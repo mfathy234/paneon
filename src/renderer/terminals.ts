@@ -33,6 +33,9 @@ function tabAgent(id: string): TabAgent | undefined {
   return undefined
 }
 
+const ESC = String.fromCharCode(27)
+const FOCUS_IN = `${ESC}[I`
+const FOCUS_OUT = `${ESC}[O`
 const lastInput = new Map<string, string>()
 
 export function ensureTerminal(id: string, fontSize: number): TerminalView {
@@ -41,7 +44,7 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const view = new TerminalView(id, fontSize, currentBundle(), {
     onInput: (data) => {
       api.write(id, data)
-      lastInput.set(id, data)
+      if (data !== FOCUS_IN && data !== FOCUS_OUT) lastInput.set(id, data)
       if (data.charCodeAt(0) !== 27 || data.length === 1) clearResumeChip(id)
     },
     onResize: (cols, rows) => api.resize(id, cols, rows),

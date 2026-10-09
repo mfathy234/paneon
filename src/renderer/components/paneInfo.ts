@@ -2,6 +2,7 @@ import { formatChanges } from '../../shared/gitChanges'
 import { formatAge, formatCost, formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
 import { formatTokens } from '../../shared/usage'
 import { modelLetter } from '../../shared/opsFeed'
+import { contextLevel } from '../../shared/contextWarning'
 import type { PaneInfo } from '../derive'
 import { h, icon } from '../dom'
 import { ICONS } from '../icons'
@@ -56,7 +57,7 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
     items.push(
       h(
         'span',
-        { class: `info-gauge stage-${gaugeStage(info.contextPercent)}`, title: 'Context window used' },
+        { class: `info-gauge stage-${gaugeStage(info.contextPercent)} ctx-${contextLevel(info.contextPercent)}`, title: 'Context window used' },
         `${gauge(info.contextPercent)} ${formatPercent(info.contextPercent)}`
       )
     )

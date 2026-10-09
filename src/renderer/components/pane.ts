@@ -38,6 +38,9 @@ import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { ensureTerminal } from '../terminals'
 import { enableDrag } from '../drag'
+import { canCompact, contextHintText, showContextHint } from '../../shared/contextWarning'
+import { dismissContextHint, typeCompact } from '../contextActions'
+import { dropFiles, hasFiles } from '../fileDrop'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -56,6 +59,8 @@ export class PaneComponent {
   private readonly attentionWord = h('span', { class: 'attention-word', hidden: true })
   private readonly info = h('div', { class: 'pane-info', hidden: true })
   private infoSignature = ''
+  private readonly hint = h('div', { class: 'pane-hint', role: 'status', hidden: true })
+  private hintSignature = ''
   private readonly drawer = new AgentsDrawer()
   private readonly details = h('aside', { class: 'pane-details', 'aria-label': 'Details', hidden: true })
   private detailsSignature = ''
@@ -118,7 +123,8 @@ export class PaneComponent {
     })
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     const content = h('div', { class: 'pane-content' }, work, this.details)
-    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.info, this.drawer.el, content)
+    this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.info, this.hint, this.drawer.el, content)
+    this.watchFileDrops()
     this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
   }
 
@@ -148,6 +154,7 @@ export class PaneComponent {
     this.statusWord.className = `status ${view.status}`
     this.updateAttention(view)
     this.updateInfo(view, maximized)
+    this.updateHint(view)
     this.drawer.update(view.opsLive ? view.snapshot : null, view.agentsOpen, view.title.toUpperCase(), view.now)
     this.updateDetails(view, maximized)
     this.restart.hidden = !view.activeExited
@@ -184,6 +191,50 @@ export class PaneComponent {
     })
     this.info.hidden = items.length === 0
     this.info.replaceChildren(...items)
+  }
+
+  private updateHint(view: PaneView): void {
+    const percent = view.info.contextPercent
+    const tabId = view.primaryTabId
+    const show = percent !== null && showContextHint(percent, store.state.contextDismissed[tabId])
+    const signature = show ? JSON.stringify([Math.round(percent), tabId, view.agent]) : ''
+    if (signature === this.hintSignature) return
+    this.hintSignature = signature
+    this.hint.hidden = !show
+    if (!show) return this.hint.replaceChildren()
+    const compact = canCompact(view.agent)
+      ? h('button', { class: 'btn small', type: 'button', onClick: () => typeCompact(tabId) }, 'Compact')
+      : null
+    this.hint.replaceChildren(
+      h('span', { class: 'pane-hint-text' }, contextHintText(percent)),
+      h('span', { class: 'spacer' }),
+      ...(compact ? [compact] : []),
+      h('button', { class: 'btn small', type: 'button', onClick: () => dismissContextHint(tabId, percent) }, 'Dismiss')
+    )
+  }
+
+  private watchFileDrops(): void {
+    const clearMark = (): void => this.el.classList.remove('file-drop')
+    this.el.addEventListener('dragover', (event) => {
+      if (!hasFiles(event.dataTransfer)) return
+      event.preventDefault()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+      this.el.classList.add('file-drop')
+    })
+    this.el.addEventListener('dragleave', (event) => {
+      if (!event.relatedTarget || !this.el.contains(event.relatedTarget as Node)) clearMark()
+    })
+    this.el.addEventListener('drop', (event) => {
+      clearMark()
+      if (!event.dataTransfer || !hasFiles(event.dataTransfer)) return
+      event.preventDefault()
+      const view = this.current
+      if (!view) return
+      const host = (event.target as HTMLElement).closest<HTMLElement>('.term-host[data-term-id]')
+      const tabId = host?.dataset.termId ?? view.pane.activeTabId
+      const agent = view.pane.tabs.find((t) => t.id === tabId)?.agent
+      dropFiles(event.dataTransfer, tabId, agent)
+    })
   }
 
   private updateDetails(view: PaneView, maximized: boolean): void {
