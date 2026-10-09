@@ -118,6 +118,7 @@ export function registerIpc(
     const known = USAGE_RANGES.some((entry) => entry.value === range)
     return usage.report(known ? range : '7d', settings.get().projects)
   })
+  ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))

@@ -1,5 +1,6 @@
 import { AGENT_NAMES, agentOf } from '../../shared/agents'
 import { filterProjects } from '../../shared/quickPick'
+import { projectTodayLabel, projectTodayTooltip } from '../../shared/sessionCost'
 import type { AgentKind, Project } from '../../shared/types'
 import { focusPane, openResumePicker, showView, startSession, toggleProjectExpanded, toggleSidebar } from '../actions'
 import type { PaneView } from '../derive'
@@ -55,6 +56,7 @@ export class SidebarComponent {
       state.focusedId,
       projects.map((p) => [p.id, p.name, p.defaultAgent]),
       state.collapsedProjects,
+      projects.map((p) => projectTodayLabel(state.usage.projectsToday[p.id])),
       views.map((v) => [v.pane.id, v.pane.projectId, v.title, v.status, v.agent])
     ])
     if (signature === this.signature) return
@@ -150,7 +152,7 @@ export class SidebarComponent {
       ),
       this.agentMenuButton(project)
     )
-    const rows: HTMLElement[] = [row]
+    const rows: HTMLElement[] = [row, ...this.todayTotal(state, project.id)]
     if (collapsed) return rows
     for (const view of own) {
       const selected = view.pane.id === state.focusedId
@@ -170,6 +172,12 @@ export class SidebarComponent {
       )
     }
     return rows
+  }
+
+  private todayTotal(state: AppState, projectId: string): HTMLElement[] {
+    const today = state.usage.projectsToday[projectId]
+    const label = projectTodayLabel(today)
+    return label ? [h('div', { class: 'proj-today', title: projectTodayTooltip(today) }, label)] : []
   }
 
   private menu: HTMLElement | null = null

@@ -3,6 +3,7 @@ import type { Attention } from '../shared/attention'
 import { matchSessions, sessionDisplayName, sessionStatus, sessionWaiting } from '../shared/sessionMatch'
 import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsFeed'
 import { matchGeminiSessions, ptyStatus } from '../shared/geminiSession'
+import { formatDuration, sessionUsage } from '../shared/sessionCost'
 import { lastOutputAt } from './ptyActivity'
 import type { CodexSession, GeminiSession, GitChanges, ModelFamily, Project, SessionFile, StatusInfo, TabAgent } from '../shared/types'
 import { folderOfPane, projectById, type AppState, type PaneState, type TermState } from './state'
@@ -21,6 +22,8 @@ export interface PaneInfo {
   model: { label: string; family: ModelFamily } | null
   contextPercent: number | null
   costUsd: number | null
+  elapsed: string | null
+  tokens: number | null
   ageMs: number | null
   changes: GitChanges | null
   ops: PaneOpsInfo | null
@@ -187,7 +190,31 @@ function claudeInfo(
   }
 }
 
-function infoFor(
+function sessionIdOf(tab: TermState, matches: Matches): string | null {
+  const matched =
+    tab.agent === 'claude'
+      ? matches.claude.get(tab.id)?.sessionId
+      : tab.agent === 'codex'
+        ? matches.codex.get(tab.id)?.sessionId
+        : tab.agent === 'gemini'
+          ? matches.gemini.get(tab.id)?.sessionId
+          : undefined
+  return matched ?? tab.sessionId ?? null
+}
+
+function withUsage(state: AppState, tab: TermState, matches: Matches, info: PaneInfo): PaneInfo {
+  if (tab.agent === 'shell') return info
+  const id = sessionIdOf(tab, matches)
+  const usage = sessionUsage(id ? state.usage.sessions[id] : undefined, tab.agent === 'claude' ? info.costUsd : null)
+  return {
+    ...info,
+    elapsed: tab.status === 'exited' ? null : formatDuration(state.now - tab.startedAt),
+    tokens: usage && usage.tokens > 0 ? usage.tokens : null,
+    costUsd: tab.agent === 'claude' ? (usage?.costUsd ?? null) : null
+  }
+}
+
+function baseInfoFor(
   state: AppState,
   tab: TermState,
   matches: Matches,
@@ -196,7 +223,7 @@ function infoFor(
   opsLive: boolean
 ): PaneInfo {
   const changes = folder ? (state.gitChanges[folder] ?? null) : null
-  const empty: PaneInfo = { model: null, contextPercent: null, costUsd: null, ageMs: null, changes, ops: null }
+  const empty: PaneInfo = { model: null, contextPercent: null, costUsd: null, elapsed: null, tokens: null, ageMs: null, changes, ops: null }
   if (tab.agent === 'claude') return claudeInfo(state, tab, matches, empty, snapshot, opsLive)
   if (tab.agent === 'codex') {
     const session = matches.codex.get(tab.id)
@@ -216,6 +243,17 @@ function infoFor(
     }
   }
   return empty
+}
+
+function infoFor(
+  state: AppState,
+  tab: TermState,
+  matches: Matches,
+  folder: string | null,
+  snapshot: OpsSnapshot | null,
+  opsLive: boolean
+): PaneInfo {
+  return withUsage(state, tab, matches, baseInfoFor(state, tab, matches, folder, snapshot, opsLive))
 }
 
 export function derivePanes(state: AppState): PaneView[] {

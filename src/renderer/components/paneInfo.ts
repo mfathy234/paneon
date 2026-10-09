@@ -1,5 +1,6 @@
 import { formatChanges } from '../../shared/gitChanges'
 import { formatAge, formatCost, formatPercent, gauge, gaugeStage } from '../../shared/statusLine'
+import { formatTokens } from '../../shared/usage'
 import { modelLetter } from '../../shared/opsFeed'
 import type { PaneInfo } from '../derive'
 import { h, icon } from '../dom'
@@ -59,6 +60,8 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
       )
     )
   }
+  if (info.elapsed !== null) items.push(h('span', { class: 'info-elapsed', title: 'Session time' }, info.elapsed))
+  if (info.tokens !== null) items.push(h('span', { class: 'info-tokens', title: 'Session tokens' }, `${formatTokens(info.tokens)} tokens`))
   if (info.costUsd !== null) items.push(h('span', { class: 'info-cost', title: 'Session cost' }, formatCost(info.costUsd)))
   if (info.changes) {
     items.push(

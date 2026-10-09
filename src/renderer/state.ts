@@ -2,6 +2,7 @@ import { defaultSettings } from '../shared/settingsSchema'
 import type { AgentPreset } from '../shared/quickPick'
 import type { AgentsReport, ToolReport } from '../shared/agentTools'
 import type { Attention } from '../shared/attention'
+import { emptySnapshot, type UsageSnapshot } from '../shared/sessionCost'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { ChangelogEntry } from '../shared/changelog'
 import { initialUpdateState, type UpdateState } from '../shared/updates'
@@ -90,6 +91,7 @@ export interface AppState {
   opsInfo: Record<string, OpsSnapshot>
   detailsPaneId: string | null
   gitChanges: Record<string, GitChanges | null>
+  usage: UsageSnapshot
   attention: Record<string, Attention>
   waiting: Record<string, boolean>
   bridge: BridgeState
@@ -128,6 +130,7 @@ export const initialState = (): AppState => ({
   opsInfo: {},
   detailsPaneId: null,
   gitChanges: {},
+  usage: emptySnapshot(),
   attention: {},
   waiting: {},
   bridge: { installed: false, busy: false, error: null, note: null },
