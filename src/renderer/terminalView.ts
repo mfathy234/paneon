@@ -4,6 +4,7 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import { insertionData } from '../shared/snippets'
 import { h } from './dom'
+import { TerminalPrompts } from './terminalPrompts'
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 
@@ -28,6 +29,7 @@ export class TerminalView {
   private readonly fitAddon = new FitAddon()
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
+  readonly prompts: TerminalPrompts
   private opened = false
   private frame = 0
 
@@ -51,7 +53,11 @@ export class TerminalView {
     })
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
-    this.term.onData((data) => callbacks.onInput(data))
+    this.prompts = new TerminalPrompts(this.term)
+    this.term.onData((data) => {
+      this.prompts.noteInput(data)
+      callbacks.onInput(data)
+    })
     this.term.onResize(({ cols, rows }) => callbacks.onResize(cols, rows))
     this.term.attachCustomKeyEventHandler((event) => this.handleKey(event))
     this.observer = new ResizeObserver(() => this.scheduleFit())
@@ -121,6 +127,30 @@ export class TerminalView {
     return this.term.getSelection()
   }
 
+  hasSelection(): boolean {
+    return this.term.hasSelection()
+  }
+
+  clearScrollback(): void {
+    this.term.clear()
+    this.prompts.clear()
+  }
+
+  writeClipboard(text: string): Promise<void> {
+    return this.callbacks.writeClipboard(text)
+  }
+
+  selectContaining(text: string): boolean {
+    const buffer = this.term.buffer.active
+    for (let row = 0; row < buffer.length; row += 1) {
+      if (buffer.getLine(row)?.translateToString(true).includes(text)) {
+        this.term.selectLines(row, row)
+        return true
+      }
+    }
+    return false
+  }
+
   insertText(text: string): { flattened: boolean } {
     const { data, flattened } = insertionData(text, this.term.modes.bracketedPasteMode)
     if (data) this.callbacks.onInput(data)
@@ -170,6 +200,7 @@ export class TerminalView {
     cancelAnimationFrame(this.frame)
     this.observer.disconnect()
     this.search.dispose()
+    this.prompts.dispose()
     this.term.dispose()
     this.el.remove()
   }

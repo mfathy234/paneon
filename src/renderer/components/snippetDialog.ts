@@ -5,6 +5,7 @@ import { nextDialogId, present } from './dialogs'
 
 export interface SnippetDialogOptions {
   snippet?: Snippet
+  prefill?: { name: string; text: string; projectId: string | null }
   snippets: Snippet[]
   projects: Project[]
 }
@@ -19,7 +20,7 @@ function scopeSelect(id: string, options: SnippetDialogOptions): HTMLSelectEleme
   const select = h('select', { class: 'rp-project field-select', id })
   select.append(h('option', { value: '' }, 'All projects'))
   for (const project of options.projects) select.append(h('option', { value: project.id }, project.name))
-  select.value = options.snippet?.projectId ?? ''
+  select.value = options.snippet?.projectId ?? options.prefill?.projectId ?? ''
   return select
 }
 
@@ -38,12 +39,12 @@ export function snippetDialog(options: SnippetDialogOptions): Promise<SnippetDra
     class: 'text-input',
     id: `sn-name-${id}`,
     type: 'text',
-    value: options.snippet?.name ?? '',
+    value: options.snippet?.name ?? options.prefill?.name ?? '',
     autocomplete: 'off',
     spellcheck: 'false'
   })
   const text = h('textarea', { class: 'text-input snippet-text', id: `sn-text-${id}`, rows: '5', spellcheck: 'false' })
-  text.value = options.snippet?.text ?? ''
+  text.value = options.snippet?.text ?? options.prefill?.text ?? ''
   const scope = scopeSelect(`sn-scope-${id}`, options)
   const shortcut = shortcutSelect(`sn-shortcut-${id}`, options)
   const error = h('p', { class: 'field-error', role: 'alert', hidden: true })

@@ -25,6 +25,8 @@ import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import { exportTranscript } from '../transcriptActions'
+import { saveSelectionAsSnippet } from '../snippetActions'
+import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
 import { AgentsDrawer } from './agentsDrawer'
 import { buildDetails } from './opsDetails'
@@ -241,6 +243,11 @@ export class PaneComponent {
       changesItem.setAttribute('disabled', '')
       changesItem.title = 'This pane folder is not a git repository'
     }
+    const snippetItem = item('Save selection as snippet', () => saveSelectionAsSnippet(this.paneId))
+    if (!paneTerminal(this.paneId)?.hasSelection()) {
+      snippetItem.setAttribute('disabled', '')
+      snippetItem.title = 'Select some text in the terminal first'
+    }
     const showDetails = item('Details', () => openDetails(this.paneId))
     const pinned = this.current?.pane.pinned === true
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId))
@@ -262,6 +269,10 @@ export class PaneComponent {
       item('Show diff', () => showPaneDiff(this.paneId)),
       changesItem,
       item('Export transcript…', () => exportTranscript(this.paneId)),
+      item('Copy last reply', () => copyLastReply(this.paneId)),
+      item('Copy current prompt', () => copyCurrentPrompt(this.paneId)),
+      snippetItem,
+      item('Clear scrollback', () => clearScrollback(this.paneId)),
       showDetails,
       pinItem,
       ...handoffs

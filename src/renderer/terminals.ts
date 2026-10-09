@@ -75,7 +75,10 @@ Object.defineProperty(window, '__grid', {
     lastInput: (id: string): string => lastInput.get(id) ?? '',
     fontSize: (id: string): number => views.get(id)?.fontSize ?? 0,
     feed: (id: string, data: string): void => views.get(id)?.write(data),
-    selectAll: (id: string): void => views.get(id)?.selectAll()
+    selectAll: (id: string): void => views.get(id)?.selectAll(),
+    selectLine: (id: string, text: string): boolean => views.get(id)?.selectContaining(text) ?? false,
+    viewportY: (id: string): number => views.get(id)?.prompts.viewportY ?? -1,
+    promptMarkers: (id: string): number => views.get(id)?.prompts.count ?? 0
   }
 })
 

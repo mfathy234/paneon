@@ -1,4 +1,6 @@
+import { SNIPPET_TEXT_MAX } from '../shared/settingsSchema'
 import { expandSnippet, usesSelection } from '../shared/snippets'
+import { suggestSnippetName } from '../shared/terminalText'
 import type { Snippet } from '../shared/types'
 import { saveSettings } from './actions'
 import { confirmDialog } from './components/dialogs'
@@ -6,6 +8,8 @@ import { snippetDialog } from './components/snippetDialog'
 import { toast } from './components/toast'
 import { folderOfPane, newId, paneById, projectById, store } from './state'
 import { getTerminal } from './terminals'
+
+type SnippetPrefill = { name: string; text: string; projectId: string | null }
 
 function setSnippets(snippets: Snippet[]): void {
   store.set((s) => ({ ...s, settings: { ...s.settings, snippets } }))
@@ -45,10 +49,11 @@ export function insertSnippet(snippet: Snippet): boolean {
   return true
 }
 
-export async function editSnippet(snippetId?: string): Promise<void> {
+export async function editSnippet(snippetId?: string, prefill?: SnippetPrefill): Promise<void> {
   const existing = snippetId ? store.state.settings.snippets.find((s) => s.id === snippetId) : undefined
   const draft = await snippetDialog({
     snippet: existing,
+    prefill,
     snippets: store.state.settings.snippets,
     projects: store.state.settings.projects
   })
@@ -74,4 +79,19 @@ export async function deleteSnippet(snippetId: string): Promise<void> {
   })
   if (!confirmed) return
   setSnippets(store.state.settings.snippets.filter((s) => s.id !== snippet.id))
+}
+
+export async function saveSelectionAsSnippet(paneId: string): Promise<void> {
+  const pane = paneById(store.state, paneId)
+  const view = pane ? getTerminal(pane.activeTabId) : undefined
+  const text = view?.selection().replace(/\s+$/, '') ?? ''
+  if (!pane || text.trim() === '') {
+    toast('Select some text in the terminal first.', 'info')
+    return
+  }
+  if (text.length > SNIPPET_TEXT_MAX) {
+    toast(`That selection is ${text.length} characters and a snippet holds at most ${SNIPPET_TEXT_MAX}. Select less text.`)
+    return
+  }
+  await editSnippet(undefined, { name: suggestSnippetName(text), text, projectId: pane.projectId })
 }

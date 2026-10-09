@@ -29,6 +29,15 @@ import {
   focusPane
 } from '../actions'
 import { derivePanes } from '../derive'
+import { saveSelectionAsSnippet } from '../snippetActions'
+import {
+  canJumpPrompt,
+  clearScrollback,
+  copyCurrentPrompt,
+  copyLastReply,
+  focusedHasSelection,
+  jumpPrompt
+} from '../terminalActions'
 import { exportTranscript } from '../transcriptActions'
 import { paneById, store, type AppState } from '../state'
 import { registerCommands, registerProvider, type Command } from './registry'
@@ -169,6 +178,39 @@ export function installBuiltinCommands(): void {
       ...focusedAction('pane.find', 'Find in the terminal', findInPane, 'search text output'),
       ...withKeys('Ctrl+Shift+F')
     },
+    {
+      id: 'terminal.previous-prompt',
+      title: 'Go to the previous prompt',
+      group: 'Actions',
+      keywords: 'jump scroll input history marker',
+      ...withKeys('Ctrl+ArrowUp'),
+      scope: 'grid',
+      enabled: (state) => hasPane(state) && canJumpPrompt(-1),
+      run: () => jumpPrompt(-1)
+    },
+    {
+      id: 'terminal.next-prompt',
+      title: 'Go to the next prompt',
+      group: 'Actions',
+      keywords: 'jump scroll input history marker',
+      ...withKeys('Ctrl+ArrowDown'),
+      scope: 'grid',
+      enabled: (state) => hasPane(state) && canJumpPrompt(1),
+      run: () => jumpPrompt(1)
+    },
+    {
+      ...focusedAction('terminal.copy-reply', 'Copy the last reply', copyLastReply, 'clipboard answer output response'),
+      ...withKeys('Ctrl+Alt+C')
+    },
+    {
+      ...focusedAction('terminal.copy-prompt', 'Copy the prompt you are typing', copyCurrentPrompt, 'clipboard input draft current'),
+      ...withKeys('Ctrl+Alt+P')
+    },
+    {
+      ...focusedAction('terminal.save-snippet', 'Save selection as a snippet', saveSelectionAsSnippet, 'selected text create'),
+      enabled: (state) => hasPane(state) && focusedHasSelection()
+    },
+    focusedAction('terminal.clear-scrollback', 'Clear the terminal scrollback', clearScrollback, 'history wipe screen output'),
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),
     focusedAction('pane.terminal', 'Open a terminal here', (id) => addTab(id, 'shell'), 'shell tab'),
