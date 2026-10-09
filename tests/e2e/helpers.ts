@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test'
 
 export interface Sandbox {
@@ -88,6 +88,8 @@ export async function launchApp(
       PANEON_NOTIFY_LOG: sandbox.notifyLog,
       PANEON_QUIT_LOG: sandbox.quitLog,
       PANEON_PIPE: sandbox.pipe,
+      GIT_CONFIG_NOSYSTEM: '1',
+      GCM_INTERACTIVE: 'never',
       ...extraEnv
     }
   })
@@ -119,6 +121,12 @@ export const fontSize = (page: Page, id: string): Promise<number> =>
 
 export const QUIT_BUDGET_MS = 10_000
 
+function killTree(proc: ReturnType<ElectronApplication['process']>, reason: string): void {
+  if (proc.exitCode !== null || proc.signalCode !== null || proc.pid === undefined) return
+  console.warn(`[e2e] ${reason}: killing the app process tree (pid ${proc.pid})`)
+  spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true })
+}
+
 export async function closeApp(app: ElectronApplication): Promise<number> {
   const started = Date.now()
   const proc = app.process()
@@ -126,7 +134,7 @@ export async function closeApp(app: ElectronApplication): Promise<number> {
   await app.evaluate(({ app: electronApp }) => electronApp.quit()).catch(() => undefined)
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, QUIT_BUDGET_MS))])
   const elapsed = Date.now() - started
-  if (proc.exitCode === null) proc.kill()
+  killTree(proc, 'quit took longer than the budget')
   await Promise.race([app.close().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 5_000))])
   return elapsed
 }
@@ -134,7 +142,7 @@ export async function closeApp(app: ElectronApplication): Promise<number> {
 export async function closeBounded(app: ElectronApplication): Promise<void> {
   const proc = app.process()
   await Promise.race([app.close().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 20_000))])
-  if (proc.exitCode === null) proc.kill()
+  killTree(proc, 'close took longer than 20 s')
 }
 
 export interface CliResult {

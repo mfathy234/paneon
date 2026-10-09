@@ -9,7 +9,8 @@ const SLOW = 20_000
 
 function git(cwd: string, ...args: string[]): string {
   const identity = ['-c', 'core.autocrlf=false', '-c', 'user.name=Test User', '-c', 'user.email=test@example.invalid']
-  return execFileSync('git', [...identity, ...args], { cwd, encoding: 'utf8' }).trim()
+  const env = { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GCM_INTERACTIVE: 'never' }
+  return execFileSync('git', [...identity, ...args], { cwd, encoding: 'utf8', env }).trim()
 }
 
 function seedRepo(folder: string): void {
