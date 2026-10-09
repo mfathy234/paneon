@@ -5,6 +5,7 @@ import {
   closePane,
   focusRelative,
   focusPaneAt,
+  focusNextAttention,
   movePane,
   movePaneBy,
   openDetails,
@@ -87,6 +88,15 @@ export function installBuiltinCommands(): void {
       scope: 'grid',
       enabled: hasPane,
       run: () => focusRelative(-1)
+    },
+    {
+      id: 'pane.next-attention',
+      title: 'Go to the next pane that needs you',
+      group: 'Actions',
+      keywords: 'waiting done permission attention',
+      ...withKeys('Ctrl+Shift+J'),
+      enabled: (state) => Object.values(state.attention).some((a) => a !== 'none'),
+      run: () => void focusNextAttention()
     },
     ...Array.from({ length: 9 }, (_, i): Command => ({
       id: `pane.focus-${i + 1}`,

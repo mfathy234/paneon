@@ -50,6 +50,7 @@ import {
   type PaneState,
   type TermState
 } from './state'
+import { nextAttentionPane } from '../shared/attention'
 import { shouldRelaunchPlain } from '../shared/resumeFallback'
 import { applyTheme } from './themeManager'
 import { disposeTerminal, getTerminal } from './terminals'
@@ -355,6 +356,13 @@ export function focusRelative(delta: number): void {
   if (panes.length === 0) return
   const current = Math.max(0, panes.findIndex((p) => p.id === focusedId))
   focusPane(panes[(current + delta + panes.length) % panes.length].id)
+}
+
+export function focusNextAttention(): boolean {
+  const { panes, focusedId, attention } = store.state
+  const target = nextAttentionPane(panes.map((p) => p.id), focusedId, attention)
+  if (target) focusPane(target)
+  return target !== null
 }
 
 export function focusPaneAt(index: number): void {

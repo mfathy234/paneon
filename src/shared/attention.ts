@@ -41,3 +41,13 @@ export function stepAttention(memory: AttentionMemory, obs: AttentionObservation
   const notify = event !== null && (!obs.windowFocused || !obs.visible) ? event : null
   return { memory: { status: obs.status, attention }, notify }
 }
+
+export function nextAttentionPane(
+  order: readonly string[],
+  focusedId: string | null,
+  attention: Readonly<Record<string, Attention>>
+): string | null {
+  const start = focusedId ? order.indexOf(focusedId) : -1
+  const rotated = order.map((_, i) => order[(start + 1 + i) % order.length])
+  return rotated.find((id) => attention[id] === 'needs') ?? rotated.find((id) => attention[id] === 'done') ?? null
+}
