@@ -22,6 +22,12 @@ test('Ctrl+V with a screenshot on the clipboard saves it and pastes its path', a
       const blob = new Blob([Buffer.from(base64, 'base64')], { type: 'image/png' })
       await clipboard.write([new ClipboardItem({ 'image/png': blob })])
     }, PNG_1PX)
+    await app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      window.show()
+      window.focus()
+      window.webContents.focus()
+    })
     await page.bringToFront()
     await page.locator(`.term-host[data-term-id="${id}"] .xterm-helper-textarea`).focus()
     await expect(page.locator(`.term-host[data-term-id="${id}"] .xterm-helper-textarea`)).toBeFocused()
