@@ -19,7 +19,8 @@ import { setupUpdates } from './updates'
 import { UsageService } from './usage'
 import type { UpdateController } from './updateController'
 import { createQuitLog } from './quitLog'
-import { FLUSH_TIMEOUT_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
+import { startQuitWatchdog } from './quitWatchdog'
+import { FLUSH_TIMEOUT_MS, HARD_DEADLINE_MS, WATCHDOG_GRACE_MS, armHardDeadline, runPhases, runQuit, type ShutdownDeps } from './shutdown'
 
 const IMAGE_SCHEME = 'cg-image'
 const quitLog = createQuitLog()
@@ -174,7 +175,11 @@ app.whenReady().then(() => {
     },
     exit: (code) => app.exit(code)
   }
+  const armWatchdog = (): void => {
+    startQuitWatchdog({ ms: HARD_DEADLINE_MS + WATCHDOG_GRACE_MS })
+  }
   const shutdown = async (): Promise<void> => {
+    armWatchdog()
     armHardDeadline(shutdownDeps)
     await runPhases(shutdownDeps)
   }
@@ -191,6 +196,7 @@ app.whenReady().then(() => {
     if (quitting) return
     quitting = true
     event.preventDefault()
+    armWatchdog()
     void runQuit(shutdownDeps)
   })
   app.on('will-quit', () => quitLog('will-quit'))

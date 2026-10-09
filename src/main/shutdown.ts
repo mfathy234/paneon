@@ -3,6 +3,7 @@ import type { QuitLog } from './quitLog'
 export const FLUSH_TIMEOUT_MS = 1000
 export const KILL_TIMEOUT_MS = 2000
 export const HARD_DEADLINE_MS = 8000
+export const WATCHDOG_GRACE_MS = 500
 
 export interface ShutdownDeps {
   log: QuitLog
