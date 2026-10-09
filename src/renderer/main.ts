@@ -1,3 +1,4 @@
+import { installUsageSnapshot } from './usageSnapshot'
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 import {
@@ -87,6 +88,7 @@ async function boot(): Promise<void> {
   setInterval(() => void refreshGitChanges(), GIT_CHANGES_POLL_MS)
   document.addEventListener('visibilitychange', () => void refreshGitChanges())
   installAttention()
+  installUsageSnapshot()
   void installOps()
   installBuiltinCommands()
   installLayoutCommands()

@@ -20,6 +20,7 @@ import {
   type UsageReport,
   type UsageSource
 } from '../shared/usage'
+import { buildUsageSnapshot, type UsageSnapshot } from '../shared/sessionCost'
 import { codexHome, geminiHome } from './agentLaunch'
 import { listGeminiChatFiles } from './geminiWatcher'
 import { claudeProjectsDir } from './paths'
@@ -186,6 +187,7 @@ export class UsageService {
   private history: UsageHistory = emptyHistory()
   private timer: NodeJS.Timeout | null = null
   private readonly running = new Map<UsageRange, Promise<UsageReport>>()
+  private snapshotJob: Promise<UsageSnapshot> | null = null
 
   constructor(private readonly historyPath: string) {}
 
@@ -219,6 +221,19 @@ export class UsageService {
     const job = this.build(range, projects).finally(() => this.running.delete(range))
     this.running.set(range, job)
     return job
+  }
+
+  snapshot(projects: Project[]): Promise<UsageSnapshot> {
+    this.snapshotJob ??= this.buildSnapshot(projects).finally(() => {
+      this.snapshotJob = null
+    })
+    return this.snapshotJob
+  }
+
+  private async buildSnapshot(projects: Project[]): Promise<UsageSnapshot> {
+    const now = Date.now()
+    const scan = await scanUsage(rangeWindow('today', now).start)
+    return buildUsageSnapshot({ now, files: scan.files, projects, history: this.history })
   }
 
   private async build(range: UsageRange, projects: Project[]): Promise<UsageReport> {
