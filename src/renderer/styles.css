@@ -3356,6 +3356,8 @@ polyline.usage-line,
 body.dragging-ui {
   user-select: none;
   cursor: grabbing;
+}
+
 .settings-view {
   flex: 1;
   min-width: 0;
