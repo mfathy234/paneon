@@ -1,10 +1,13 @@
 import { execFile } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { compareNames, isCompareBranch, isCompareWorktree, isShortId } from '../shared/compare'
 import type { WorktreeStatus } from '../shared/compare'
 import type { GitResult, RepoProbe, WorktreeRemoval, WorktreesResult } from '../shared/types'
 
 const GIT_TIMEOUT_MS = 20_000
+const REMOVE_ATTEMPTS = 6
+const REMOVE_RETRY_MS = 300
+const LOCKED = /permission denied|being used by another process|directory not empty|resource busy/i
 
 interface GitRun {
   ok: boolean
@@ -63,17 +66,37 @@ export async function worktreeStatus(repo: string, path: string, branch: string)
   }
 }
 
+const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function removeWorktreeFolder(repo: string, path: string, force: boolean | undefined): Promise<string | null> {
+  for (let attempt = 1; ; attempt += 1) {
+    const removed = await git(['worktree', 'remove', ...(force ? ['--force'] : []), path], repo)
+    if (removed.ok || !existsSync(path)) return null
+    if (/is not a working tree/i.test(removed.stderr)) return deleteLeftover(path)
+    if (!LOCKED.test(removed.stderr) || attempt >= REMOVE_ATTEMPTS) return gitError(removed, `git could not remove ${path}.`)
+    await pause(REMOVE_RETRY_MS * attempt)
+  }
+}
+
+function deleteLeftover(path: string): string | null {
+  try {
+    rmSync(path, { recursive: true, force: true, maxRetries: REMOVE_ATTEMPTS, retryDelay: REMOVE_RETRY_MS })
+    return null
+  } catch (error) {
+    return `Could not delete ${path}: ${(error as Error).message}`
+  }
+}
+
 export async function removeWorktree(request: WorktreeRemoval): Promise<GitResult> {
   const { repo, path, branch, force } = request
   if (!isCompareBranch(branch) || !isCompareWorktree(path)) {
     return { ok: false, error: 'Paneon only removes worktrees and branches it created for a comparison.' }
   }
   if (existsSync(path)) {
-    const removed = await git(['worktree', 'remove', ...(force ? ['--force'] : []), path], repo)
-    if (!removed.ok) return { ok: false, error: gitError(removed, `git could not remove ${path}.`) }
-  } else {
-    await git(['worktree', 'prune'], repo)
+    const problem = await removeWorktreeFolder(repo, path, force)
+    if (problem) return { ok: false, error: problem }
   }
+  await git(['worktree', 'prune'], repo)
   const deleted = await git(['branch', force ? '-D' : '-d', branch], repo)
   if (!deleted.ok && !/not found/i.test(deleted.stderr)) return { ok: false, error: gitError(deleted, `git could not delete ${branch}.`) }
   return { ok: true }
