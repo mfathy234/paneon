@@ -43,3 +43,9 @@ export async function changedFiles(folder: string): Promise<string[] | null> {
   for (const path of (untracked ?? '').split('\n')) if (path.trim()) files.add(path.trim())
   return [...files]
 }
+
+export async function diffStat(folder: string): Promise<string | null> {
+  const inside = await run(['rev-parse', '--is-inside-work-tree'], folder)
+  if (inside !== 'true') return null
+  return run(['diff', 'HEAD', '--stat'], folder)
+}

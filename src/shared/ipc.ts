@@ -51,6 +51,7 @@ export const IPC = {
   updateRestart: 'update:restart',
   updateOpenLink: 'update:open-link',
   usageGet: 'usage:get',
+  transcriptExport: 'transcript:export',
   compareProbe: 'compare:probe',
   compareCreate: 'compare:create',
   compareStatus: 'compare:status',

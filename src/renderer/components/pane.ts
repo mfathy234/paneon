@@ -20,6 +20,7 @@ import { store } from '../state'
 import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
+import { exportTranscript } from '../transcriptActions'
 import type { TabAgent } from '../../shared/types'
 import { AgentsDrawer } from './agentsDrawer'
 import { buildDetails } from './opsDetails'
@@ -232,6 +233,7 @@ export class PaneComponent {
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer')),
       item('Open terminal here', () => addTab(this.paneId, 'shell')),
       item('Show diff', () => showPaneDiff(this.paneId)),
+      item('Export transcript…', () => exportTranscript(this.paneId)),
       showDetails,
       ...handoffs
     )

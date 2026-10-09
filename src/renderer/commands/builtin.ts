@@ -24,6 +24,7 @@ import {
   focusPane
 } from '../actions'
 import { derivePanes } from '../derive'
+import { exportTranscript } from '../transcriptActions'
 import { paneById, store, type AppState } from '../state'
 import { registerCommands, registerProvider, type Command } from './registry'
 
@@ -154,6 +155,7 @@ export function installBuiltinCommands(): void {
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),
     focusedAction('pane.terminal', 'Open a terminal here', (id) => addTab(id, 'shell'), 'shell tab'),
     focusedAction('pane.diff', 'Show git diff', showPaneDiff, 'changes'),
+    focusedAction('pane.transcript', 'Export transcript…', exportTranscript, 'save markdown html conversation chat history'),
     focusedAction('pane.details', 'Show pane details', openDetails, 'context limits files'),
     focusedAction('pane.close', 'Close the pane', closePane, 'stop session'),
     { id: 'view.sidebar', title: 'Toggle the sidebar', group: 'Actions', run: () => toggleSidebar() },

@@ -3,6 +3,7 @@ import type { CliCommand, CliReply } from './cli'
 import type { WorktreeStatus } from './compare'
 import type { OpsSnapshot } from './opsFeed'
 import type { UpdateState } from './updates'
+import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { UsageRange, UsageReport } from './usage'
 import type {
   AgentKind,
@@ -83,6 +84,7 @@ export interface GridApi {
   restartToUpdate(): Promise<void>
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
+  exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   compareProbe(folder: string): Promise<RepoProbe>
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>

@@ -67,6 +67,7 @@ const api: GridApi = {
   restartToUpdate: () => ipcRenderer.invoke(IPC.updateRestart),
   openUpdateLink: (url) => ipcRenderer.invoke(IPC.updateOpenLink, url),
   usageReport: (range) => ipcRenderer.invoke(IPC.usageGet, range),
+  exportTranscript: (request) => ipcRenderer.invoke(IPC.transcriptExport, request),
   compareProbe: (folder) => ipcRenderer.invoke(IPC.compareProbe, folder),
   compareCreate: (folder, short) => ipcRenderer.invoke(IPC.compareCreate, folder, short),
   compareStatus: (repo, path, branch) => ipcRenderer.invoke(IPC.compareStatus, repo, path, branch),
