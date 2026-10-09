@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { parseShortstat } from '../shared/gitChanges'
+import { parseAheadBehind, type SyncCounts } from '../shared/gitBranches'
 import { parseNumstat } from '../shared/handoff'
 import type { GitChanges } from '../shared/types'
 
@@ -21,8 +22,20 @@ export async function currentBranch(folder: string): Promise<string | null> {
 
 const changesCache = new Map<string, { at: number; value: GitChanges | null }>()
 
+const syncCache = new Map<string, { at: number; value: SyncCounts | null }>()
+
 export function forgetChanges(): void {
   changesCache.clear()
+  syncCache.clear()
+}
+
+export async function gitSync(folder: string): Promise<SyncCounts | null> {
+  const cached = syncCache.get(folder)
+  if (cached && Date.now() - cached.at < CHANGES_TTL_MS) return cached.value
+  const counts = await run(['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'], folder)
+  const value = counts ? parseAheadBehind(counts) : null
+  syncCache.set(folder, { at: Date.now(), value })
+  return value
 }
 
 export async function gitChanges(folder: string): Promise<GitChanges | null> {

@@ -19,7 +19,9 @@ import { projectFolder, readInstruction, writeInstruction } from './instructionF
 import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
 import type { FileRef } from '../shared/filePaths'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
-import { changedFiles, currentBranch, gitChanges } from './git'
+import { changedFiles, currentBranch, gitChanges, gitSync } from './git'
+import { listBranches, runGitQuick } from './gitQuick'
+import type { GitQuickRequest } from '../shared/gitBranches'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
 import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
@@ -96,6 +98,9 @@ export function registerIpc(
   ipcMain.handle(IPC.gitPush, (_event, folder: string) => pushBranch(folder))
   ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => discardFiles(request))
   ipcMain.handle(IPC.gitDiff, (_event, folder: string, path: string) => fileDiff(folder, path))
+  ipcMain.handle(IPC.gitSync, (_event, folder: string) => gitSync(folder))
+  ipcMain.handle(IPC.gitBranches, (_event, folder: string) => listBranches(folder))
+  ipcMain.handle(IPC.gitQuick, (_event, request: GitQuickRequest) => runGitQuick(request))
   ipcMain.handle(IPC.resumeList, (_event, agent: AgentKind, folder: string) =>
     agent === 'codex' ? listCodexSessions(folder) : agent === 'gemini' ? listGeminiSessions(folder) : listClaudeSessions(folder)
   )
