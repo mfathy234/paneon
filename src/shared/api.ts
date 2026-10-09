@@ -3,6 +3,7 @@ import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
 import type { FileRef } from './filePaths'
 import type { WorktreeStatus } from './compare'
+import type { BranchListResult, GitQuickRequest, GitQuickResult, SyncCounts } from './gitBranches'
 import type { CommitRequest, DiscardRequest, GitCommitResult, GitDiffResult, RepoStatusResult } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
 import type { UpdateState } from './updates'
@@ -61,6 +62,9 @@ export interface GridApi {
   gitPush(folder: string): Promise<GitResult>
   gitDiscard(request: DiscardRequest): Promise<GitResult>
   gitDiff(folder: string, path: string): Promise<GitDiffResult>
+  gitSync(folder: string): Promise<SyncCounts | null>
+  gitBranches(folder: string): Promise<BranchListResult>
+  gitQuick(request: GitQuickRequest): Promise<GitQuickResult>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>

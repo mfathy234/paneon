@@ -29,6 +29,7 @@ import {
   focusPane
 } from '../actions'
 import { derivePanes } from '../derive'
+import { applyStashPane, fetchPane, pullPane, stashPane, switchBranchPane } from '../gitQuickActions'
 import { saveSelectionAsSnippet } from '../snippetActions'
 import {
   canJumpPrompt,
@@ -215,6 +216,11 @@ export function installBuiltinCommands(): void {
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),
     focusedAction('pane.terminal', 'Open a terminal here', (id) => addTab(id, 'shell'), 'shell tab'),
     focusedAction('pane.diff', 'Show git diff', showPaneDiff, 'changes'),
+    focusedAction('git.pull', 'Pull', pullPane, 'git fast-forward update upstream'),
+    focusedAction('git.switch', 'Switch branch…', switchBranchPane, 'git checkout create branch'),
+    focusedAction('git.stash', 'Stash changes', stashPane, 'git save uncommitted work'),
+    focusedAction('git.stash-pop', 'Apply last stash', applyStashPane, 'git pop restore'),
+    focusedAction('git.fetch', 'Fetch', fetchPane, 'git prune remote ahead behind'),
     {
       id: 'pane.changes',
       title: 'Show changes and commit',

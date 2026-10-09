@@ -1,5 +1,6 @@
 import { defaultSettings } from '../shared/settingsSchema'
 import type { AgentPreset } from '../shared/quickPick'
+import type { SyncCounts } from '../shared/gitBranches'
 import type { AgentsReport, ToolReport } from '../shared/agentTools'
 import type { Attention } from '../shared/attention'
 import { emptySnapshot, type UsageSnapshot } from '../shared/sessionCost'
@@ -93,6 +94,7 @@ export interface AppState {
   codexSessions: CodexSession[]
   geminiSessions: GeminiSession[]
   branches: Record<string, string | null>
+  gitSync: Record<string, SyncCounts | null>
   statusInfo: Record<string, StatusInfo>
   opsInfo: Record<string, OpsSnapshot>
   detailsPaneId: string | null
@@ -134,6 +136,7 @@ export const initialState = (): AppState => ({
   codexSessions: [],
   geminiSessions: [],
   branches: {},
+  gitSync: {},
   statusInfo: {},
   opsInfo: {},
   detailsPaneId: null,

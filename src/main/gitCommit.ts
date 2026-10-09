@@ -29,11 +29,11 @@ interface Outcome {
   message: string
 }
 
-function git(root: string, args: string[], timeout = QUICK_MS): Promise<Outcome> {
+export function git(root: string, args: string[], timeout = QUICK_MS, literalPathspecs = true): Promise<Outcome> {
   return new Promise((resolveRun) => {
     execFile(
       'git',
-      ['--literal-pathspecs', '-c', 'core.quotepath=false', ...args],
+      [...(literalPathspecs ? ['--literal-pathspecs'] : []), '-c', 'core.quotepath=false', ...args],
       {
         cwd: root,
         timeout,
@@ -49,7 +49,7 @@ function git(root: string, args: string[], timeout = QUICK_MS): Promise<Outcome>
   })
 }
 
-async function repoRoot(folder: unknown): Promise<string | null> {
+export async function repoRoot(folder: unknown): Promise<string | null> {
   if (typeof folder !== 'string' || folder === '') return null
   const result = await git(folder, ['rev-parse', '--show-toplevel'])
   const root = result.stdout.trim()

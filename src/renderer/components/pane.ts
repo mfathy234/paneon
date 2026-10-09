@@ -31,7 +31,9 @@ import { exportTranscript } from '../transcriptActions'
 import { saveSelectionAsSnippet } from '../snippetActions'
 import { clearScrollback, copyCurrentPrompt, copyLastReply, paneTerminal } from '../terminalActions'
 import type { TabAgent } from '../../shared/types'
+import { describeSync, formatSync } from '../../shared/gitBranches'
 import { AgentsDrawer } from './agentsDrawer'
+import { openBranchMenu } from './gitMenu'
 import { buildDetails } from './opsDetails'
 import { paneInfoStrip } from './paneInfo'
 import { ICONS } from '../icons'
@@ -50,8 +52,16 @@ export class PaneComponent {
   private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
   private readonly compareChip = h('span', { class: 'chip chip-compare', hidden: true })
   private readonly fromChip = h('span', { class: 'chip chip-from', hidden: true })
-  private readonly branch = h('span', { class: 'chip', hidden: true })
+  private readonly branch = h('button', {
+    class: 'chip chip-branch',
+    type: 'button',
+    hidden: true,
+    title: 'Git actions',
+    'aria-haspopup': 'menu',
+    onClick: () => openBranchMenu(this.paneId, this.branch)
+  })
   private readonly branchName = h('span', { class: 'chip-text' })
+  private readonly branchSync = h('span', { class: 'chip-sync', hidden: true })
   private readonly statusWord = h('span', { class: 'status' })
   private readonly attentionWord = h('span', { class: 'attention-word', hidden: true })
   private readonly info = h('div', { class: 'pane-info', hidden: true })
@@ -70,7 +80,7 @@ export class PaneComponent {
   private lastActiveTab = ''
 
   constructor(readonly paneId: string) {
-    this.branch.append(icon(ICONS.branch), this.branchName)
+    this.branch.append(icon(ICONS.branch), this.branchName, this.branchSync)
     this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
@@ -144,6 +154,10 @@ export class PaneComponent {
     this.el.classList.toggle('pinned', view.pane.pinned === true)
     this.branch.hidden = !view.branch
     this.branchName.textContent = view.branch ?? ''
+    const sync = formatSync(view.sync)
+    this.branchSync.hidden = sync === ''
+    this.branchSync.textContent = sync
+    this.branch.title = view.sync ? `Git actions. ${describeSync(view.sync)} of ${view.branch ?? 'the upstream'}` : 'Git actions'
     this.statusWord.textContent = view.status
     this.statusWord.className = `status ${view.status}`
     this.updateAttention(view)

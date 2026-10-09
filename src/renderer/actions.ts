@@ -769,6 +769,11 @@ export async function refreshBranches(): Promise<void> {
   const entries = await Promise.all([...folders].map(async (f) => [f, await api.gitBranch(f)] as const))
   const changed = entries.some(([folder, branch]) => store.state.branches[folder] !== branch)
   if (changed) store.set((s) => ({ ...s, branches: { ...s.branches, ...Object.fromEntries(entries) } }))
+  const syncs = await Promise.all([...folders].map(async (f) => [f, await api.gitSync(f)] as const))
+  const known = store.state.gitSync
+  if (syncs.some(([folder, value]) => JSON.stringify(known[folder] ?? null) !== JSON.stringify(value))) {
+    store.set((s) => ({ ...s, gitSync: { ...s.gitSync, ...Object.fromEntries(syncs) } }))
+  }
 }
 
 export function setTheme(id: string): void {

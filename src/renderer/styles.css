@@ -625,6 +625,30 @@ button {
   text-overflow: ellipsis;
 }
 
+.chip-branch {
+  background: transparent;
+  cursor: pointer;
+}
+
+.chip-branch:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.chip-sync {
+  flex: none;
+  color: var(--accent);
+}
+
+.branch-refusal {
+  white-space: pre-line;
+}
+
+.branch-invalid {
+  color: var(--muted);
+  cursor: default;
+}
+
 .status {
   flex: none;
   font-size: 12px;
@@ -1050,6 +1074,7 @@ input[type='checkbox'] {
 }
 
 .toast {
+  white-space: pre-line;
   padding: 10px 14px;
   background: var(--surface);
   border: 1px solid var(--border);

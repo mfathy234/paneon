@@ -1,4 +1,5 @@
 import { matchCodexSessions } from '../shared/codexSession'
+import type { SyncCounts } from '../shared/gitBranches'
 import type { Attention } from '../shared/attention'
 import { matchSessions, sessionDisplayName, sessionStatus, sessionWaiting } from '../shared/sessionMatch'
 import { opsModelLabel, runningFamilies, type OpsSnapshot } from '../shared/opsFeed'
@@ -44,6 +45,7 @@ export interface PaneView {
   agent: TabAgent
   status: PaneStatus
   branch: string | null
+  sync: SyncCounts | null
   tabs: TabView[]
   activeExited: boolean
   primaryTabId: string
@@ -282,6 +284,7 @@ export function derivePanes(state: AppState): PaneView[] {
       now: state.now,
       detailsOpen: state.detailsPaneId === pane.id && state.maximizedId === pane.id,
       branch: folder ? (state.branches[folder] ?? null) : null,
+      sync: folder ? (state.gitSync[folder] ?? null) : null,
       activeExited: active.status === 'exited',
       primaryTabId: primary.id,
       fileWaiting: primary.agent === 'claude' && sessionWaiting(matches.claude.get(primary.id)),
