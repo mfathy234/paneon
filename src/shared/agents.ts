@@ -11,6 +11,12 @@ export const AGENT_NAMES: Record<TabAgent, string> = {
 
 export const AGENT_MARKS: Record<AgentKind, string> = { claude: 'C', codex: 'X', gemini: 'G' }
 
+export const FULL_ACCESS_FLAGS: Record<AgentKind, string> = {
+  claude: '--dangerously-skip-permissions',
+  codex: '--dangerously-bypass-approvals-and-sandbox',
+  gemini: '--yolo'
+}
+
 export const CODEX_MARK = { background: '#7e57e0', color: '#ffffff' } as const
 
 export const GEMINI_MARK = { background: '#2f6fe4', color: '#ffffff' } as const

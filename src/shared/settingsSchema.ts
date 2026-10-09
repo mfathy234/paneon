@@ -8,6 +8,7 @@ import {
   type BackgroundImage,
   type CompareLink,
   type CompareNames,
+  type FullAccess,
   type Project,
   type SavedLayout,
   type SavedPane,
@@ -37,6 +38,8 @@ const makeId = (): string => {
 
 export const DEFAULT_PALETTE_SHORTCUT = 'Ctrl+K'
 
+export const defaultFullAccess = (): FullAccess => ({ claude: true, codex: true, gemini: false })
+
 export const defaultImage = (): BackgroundImage => ({ enabled: false, path: null, dim: 60, blur: 0 })
 
 export const defaultSettings = (): Settings => ({
@@ -51,7 +54,8 @@ export const defaultSettings = (): Settings => ({
   snippets: [],
   lastSeenVersion: null,
   autoUpdateCheck: true,
-  paletteShortcut: DEFAULT_PALETTE_SHORTCUT
+  paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
+  fullAccess: defaultFullAccess()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -205,6 +209,13 @@ function sanitizeSnippets(value: unknown, projectIds: Set<string>): Snippet[] {
   return snippets.slice(0, MAX_SNIPPETS)
 }
 
+function sanitizeFullAccess(value: unknown): FullAccess {
+  const defaults = defaultFullAccess()
+  if (!isRecord(value)) return defaults
+  const pick = (agent: keyof FullAccess): boolean => (typeof value[agent] === 'boolean' ? (value[agent] as boolean) : defaults[agent])
+  return { claude: pick('claude'), codex: pick('codex'), gemini: pick('gemini') }
+}
+
 function sanitizeShortcut(value: unknown): string {
   const binding = typeof value === 'string' ? parseShortcut(value) : null
   return binding ? formatShortcut(binding) : DEFAULT_PALETTE_SHORTCUT
@@ -231,6 +242,7 @@ export function migrateSettings(raw: unknown): Settings {
     snippets: sanitizeSnippets(raw.snippets, new Set(projects.map((p) => p.id))),
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
-    paletteShortcut: sanitizeShortcut(raw.paletteShortcut)
+    paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
+    fullAccess: sanitizeFullAccess(raw.fullAccess)
   }
 }

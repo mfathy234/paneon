@@ -96,7 +96,10 @@ export interface Settings {
   lastSeenVersion: string | null
   autoUpdateCheck: boolean
   paletteShortcut: string
+  fullAccess: FullAccess
 }
+
+export type FullAccess = Record<AgentKind, boolean>
 
 export interface SettingsLoadResult {
   settings: Settings
@@ -222,6 +225,7 @@ export interface SpawnRequest {
   rows: number
   command?: string
   prompt?: string
+  fullAccess?: boolean
 }
 
 export type SpawnResult = { ok: true; pid: number } | { ok: false; error: string }

@@ -140,6 +140,7 @@ export async function launch(paneId: string, termId: string, resume: boolean): P
     sessionId,
     command: term.command,
     prompt: term.prompt,
+    fullAccess: term.agent !== 'shell' && state.settings.fullAccess[term.agent],
     cols: view?.cols ?? 120,
     rows: view?.rows ?? 30
   })
@@ -589,6 +590,12 @@ export async function runUpdateAction(action: 'check' | 'download' | 'retry' | '
 
 export function openUpdateLink(url: string): void {
   void api.openUpdateLink(url)
+}
+
+export function setFullAccess(agent: AgentKind, value: boolean): void {
+  const fullAccess = { ...store.state.settings.fullAccess, [agent]: value }
+  store.set((s) => ({ ...s, settings: { ...s.settings, fullAccess } }))
+  void saveSettings({ fullAccess })
 }
 
 export function setAutoUpdateCheck(value: boolean): void {

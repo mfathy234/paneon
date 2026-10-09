@@ -1825,6 +1825,24 @@ input[type='checkbox'] {
   color: var(--gemini-bg);
 }
 
+.tool-badge.brand svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tool-access {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: -12px 0 16px 52px;
+}
+
+.tool-access .hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .tool-id {
   width: 300px;
   flex: none;

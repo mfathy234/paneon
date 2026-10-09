@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -68,6 +68,28 @@ test('a failed install reports the exit code and keeps the tab', async () => {
     await row(page, 'gemini').getByRole('button', { name: 'Install Gemini CLI' }).click()
     await expect(page.locator('.toast.error')).toContainText('Gemini CLI was not installed (exit code 1)', { timeout: 30_000 })
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['install gemini'])
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('full access starts on for Claude and Codex, off for Gemini, and the choice is saved', async () => {
+  const { env } = fakeEnv({ claude: '2.1.301', codex: '0.156.1', gemini: '0.9.1' })
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox, env)
+  try {
+    await page.getByRole('button', { name: /^Agents/ }).click()
+    await expect(row(page, 'claude').getByLabel('Start with full access')).toBeChecked({ timeout: 20_000 })
+    await expect(row(page, 'codex').getByLabel('Start with full access')).toBeChecked()
+    await expect(row(page, 'gemini').getByLabel('Start with full access')).not.toBeChecked()
+    await expect(row(page, 'codex')).toContainText('--dangerously-bypass-approvals-and-sandbox')
+    await expect(row(page, 'claude').locator('.agent-mark svg')).toHaveCount(1)
+
+    await row(page, 'codex').getByLabel('Start with full access').uncheck()
+    await row(page, 'gemini').getByLabel('Start with full access').check()
+    const settings = () => JSON.parse(readFileSync(join(sandbox.userData, 'settings.json'), 'utf8'))
+    await expect.poll(() => settings().fullAccess, { timeout: 30_000 }).toEqual({ claude: true, codex: false, gemini: true })
+    await page.screenshot({ path: 'test-results/screens/40-agents-full-access.png' })
   } finally {
     await closeApp(app)
   }

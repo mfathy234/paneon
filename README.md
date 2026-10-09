@@ -33,7 +33,7 @@
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
 - **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, `paneon open <layout>` to bring a saved layout back, or `paneon ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
-- **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab.
+- **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
 - **Themes.** Eight themes (Grid Dark, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
@@ -241,6 +241,16 @@ Open **Agents** in the top bar. Each row shows the installed version (`<cli> --v
 | Gemini CLI | `npm install -g @google/gemini-cli@latest` | same |
 
 npm-based commands need Node.js 20+; without it the row shows "Needs Node.js 20+" with a link instead of a button. Nothing runs until you click.
+
+**Start with full access** under each agent decides whether new sessions skip the agent's approval prompts. It is on for Claude Code and Codex CLI and off for Gemini CLI until you change it, and applies to sessions started after the change. Paneon passes the agent's own flag:
+
+| Agent | Flag |
+|---|---|
+| Claude Code | `--dangerously-skip-permissions` |
+| Codex CLI | `--dangerously-bypass-approvals-and-sandbox` (no sandbox either) |
+| Gemini CLI | `--yolo` |
+
+With it on the agent edits files and runs commands without asking, so turn it off for folders you do not trust.
 
 ## Status-line bridge and ops feed (opt-in)
 

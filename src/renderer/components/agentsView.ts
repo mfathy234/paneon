@@ -1,6 +1,6 @@
-import { refreshAgentTools, runAgentTask } from '../actions'
+import { refreshAgentTools, runAgentTask, setFullAccess } from '../actions'
 import { api } from '../api'
-import { AGENTS } from '../../shared/agents'
+import { AGENTS, FULL_ACCESS_FLAGS } from '../../shared/agents'
 import {
   NODE_DOWNLOAD_URL,
   NODE_NOTE,
@@ -13,9 +13,8 @@ import {
 } from '../../shared/agentTools'
 import type { AgentKind } from '../../shared/types'
 import { clear, h } from '../dom'
+import { agentMark } from './agentMark'
 import type { AppState } from '../state'
-
-const BADGES: Record<AgentKind, string> = { claude: 'C', codex: 'X', gemini: 'G' }
 
 export class AgentsViewComponent {
   readonly el = h('main', { class: 'agents-view', 'aria-label': 'Agents' })
@@ -55,7 +54,7 @@ export class AgentsViewComponent {
   update(state: AppState): void {
     this.current = state
     const { report, checking } = state.agents
-    const signature = JSON.stringify([report, checking, [...this.shown], state.info.shellCommand])
+    const signature = JSON.stringify([report, checking, [...this.shown], state.info.shellCommand, state.settings.fullAccess])
     if (signature === this.signature) return
     this.signature = signature
     this.check.disabled = checking
@@ -68,11 +67,11 @@ export class AgentsViewComponent {
     }
     for (const agent of AGENTS) {
       const tool = report.tools.find((t) => t.agent === agent)
-      if (tool) this.rows.append(this.row(tool, report.node))
+      if (tool) this.rows.append(this.row(tool, report.node, state.settings.fullAccess[agent]))
     }
   }
 
-  private row(tool: ToolReport, node: NonNullable<AppState['agents']['report']>['node']): HTMLElement {
+  private row(tool: ToolReport, node: NonNullable<AppState['agents']['report']>['node'], fullAccess: boolean): HTMLElement {
     const command = toolCommand(tool)
     const shown = this.shown.has(tool.agent)
     const toggle = h(
@@ -96,15 +95,29 @@ export class AgentsViewComponent {
       h(
         'div',
         { class: 'tool-row' },
-        h('span', { class: `tool-badge ${tool.agent}`, 'aria-hidden': 'true' }, BADGES[tool.agent]),
+        agentMark(tool.agent, 'tool-badge'),
         h('div', { class: 'tool-id' }, h('div', { class: 'tool-name' }, TOOL_NAMES[tool.agent]), h('div', { class: 'tool-source' }, sourceLine(tool))),
         this.status(tool),
         toggle,
         this.action(tool, command, node)
       )
     )
+    row.append(this.fullAccessToggle(tool.agent, fullAccess))
     if (shown) row.append(h('pre', { class: 'tool-command' }, command.text))
     return row
+  }
+
+  private fullAccessToggle(agent: AgentKind, checked: boolean): HTMLElement {
+    const id = `full-access-${agent}`
+    const input = h('input', { type: 'checkbox', id })
+    input.checked = checked
+    input.addEventListener('change', () => setFullAccess(agent, input.checked))
+    return h(
+      'div',
+      { class: 'tool-access' },
+      h('label', { class: 'check', for: id }, input, 'Start with full access'),
+      h('span', { class: 'hint' }, `Runs without approval prompts (${FULL_ACCESS_FLAGS[agent]}). Applies to new sessions.`)
+    )
   }
 
   private status(tool: ToolReport): HTMLElement {

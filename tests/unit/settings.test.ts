@@ -16,6 +16,13 @@ describe('migrateSettings', () => {
 
   it('keeps a valid palette shortcut in a normal form and falls back to Ctrl+K otherwise', () => {
     expect(migrateSettings({}).paletteShortcut).toBe('Ctrl+K')
+    expect(migrateSettings({}).fullAccess).toEqual({ claude: true, codex: true, gemini: false })
+    expect(migrateSettings({ fullAccess: { codex: false, gemini: true, claude: 'yes' } }).fullAccess).toEqual({
+      claude: true,
+      codex: false,
+      gemini: true
+    })
+    expect(migrateSettings({ fullAccess: [] }).fullAccess).toEqual({ claude: true, codex: true, gemini: false })
     expect(migrateSettings({ paletteShortcut: 'ctrl+alt+p' }).paletteShortcut).toBe('Ctrl+Alt+P')
     expect(migrateSettings({ paletteShortcut: 'P' }).paletteShortcut).toBe('Ctrl+K')
     expect(migrateSettings({ paletteShortcut: 42 }).paletteShortcut).toBe('Ctrl+K')

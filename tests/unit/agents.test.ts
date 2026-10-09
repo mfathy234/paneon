@@ -45,6 +45,31 @@ describe('agentArgs', () => {
     expect(agentArgs({ agent: 'codex', resume: false, sessionId: 'abc' }, false)).toEqual([])
   })
 
+  it('adds the full-access flag of each agent only when asked, after a codex resume subcommand', () => {
+    expect(agentArgs({ agent: 'claude', resume: false, fullAccess: true }, false)).toEqual(['--dangerously-skip-permissions'])
+    expect(agentArgs({ agent: 'claude', resume: true, sessionId: 'abc', fullAccess: true }, false)).toEqual([
+      '--dangerously-skip-permissions',
+      '-r',
+      'abc'
+    ])
+    expect(agentArgs({ agent: 'codex', resume: false, fullAccess: true }, false)).toEqual([
+      '--dangerously-bypass-approvals-and-sandbox'
+    ])
+    expect(agentArgs({ agent: 'codex', resume: true, sessionId: 'abc', fullAccess: true }, false)).toEqual([
+      'resume',
+      'abc',
+      '--dangerously-bypass-approvals-and-sandbox'
+    ])
+    expect(agentArgs({ agent: 'gemini', resume: false, sessionId: 'u-1', fullAccess: true }, false)).toEqual([
+      '--yolo',
+      '--session-id',
+      'u-1'
+    ])
+    expect(agentArgs({ agent: 'codex', resume: false, fullAccess: false }, false)).toEqual([])
+    expect(agentArgs({ agent: 'shell', resume: false, fullAccess: true }, false)).toEqual([])
+    expect(agentArgs({ agent: 'claude', resume: false, fullAccess: true }, true)).toEqual([])
+  })
+
   it('gemini starts with a chosen session id and resumes exactly that id, never latest', () => {
     expect(agentArgs({ agent: 'gemini', resume: false, sessionId: 'u-1' }, false)).toEqual(['--session-id', 'u-1'])
     expect(agentArgs({ agent: 'gemini', resume: true, sessionId: 'u-1' }, false)).toEqual(['--resume', 'u-1'])

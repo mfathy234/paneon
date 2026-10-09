@@ -9,6 +9,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - Move panes. A **Move pane** button in each pane header lists every position, and Ctrl+Shift+Alt+Left / Right (Home /
   End for first / last) moves the focused pane. The order is saved with the workspace.
+- Full access per agent. **Start with full access** in the Agents view starts new sessions without approval prompts
+  (`--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox`, `--yolo`). It is on for Claude Code
+  and Codex CLI and off for Gemini CLI by default.
 - Pane keyboard shortcuts: **Ctrl+Tab** and **Ctrl+Shift+Tab** cycle the panes, **Ctrl+1** to **Ctrl+9** jump to one.
 
 ### Changed

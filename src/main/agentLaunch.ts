@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { claudeFallbackDirs, resolveExecutable, splitArgs } from './executables'
-import { AGENT_NAMES } from '../shared/agents'
+import { AGENT_NAMES, FULL_ACCESS_FLAGS } from '../shared/agents'
 import { promptArgs } from '../shared/compare'
 import type { AgentKind, SpawnRequest } from '../shared/types'
 
@@ -83,12 +83,22 @@ function geminiArgs(request: Pick<SpawnRequest, 'resume' | 'sessionId'>): string
   return request.resume ? ['--resume', request.sessionId] : ['--session-id', request.sessionId]
 }
 
-export function agentArgs(request: Pick<SpawnRequest, 'agent' | 'resume' | 'sessionId'>, overridden: boolean): string[] {
-  if (overridden) return []
+function sessionArgs(request: Pick<SpawnRequest, 'agent' | 'resume' | 'sessionId'>): string[] {
   if (request.agent === 'gemini') return geminiArgs(request)
   if (!request.resume) return []
   if (request.agent === 'claude') return request.sessionId ? ['-r', request.sessionId] : ['--continue']
   return request.sessionId ? ['resume', request.sessionId] : []
+}
+
+export function agentArgs(
+  request: Pick<SpawnRequest, 'agent' | 'resume' | 'sessionId' | 'fullAccess'>,
+  overridden: boolean
+): string[] {
+  if (overridden) return []
+  const session = sessionArgs(request)
+  if (!request.fullAccess || request.agent === 'shell') return session
+  const flag = FULL_ACCESS_FLAGS[request.agent]
+  return request.agent === 'codex' ? [...session, flag] : [flag, ...session]
 }
 
 export function shellArgs(file: string, command?: string): string[] {
