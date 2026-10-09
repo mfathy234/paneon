@@ -250,6 +250,11 @@ export async function showPaneDiff(paneId: string): Promise<void> {
   await addTab(paneId, 'shell', 'git diff\r')
 }
 
+export async function paneSolution(paneId: string): Promise<string | null> {
+  const folder = paneFolder(paneId)
+  return folder ? api.findSolution(folder) : null
+}
+
 export function paneHasRepo(paneId: string): boolean {
   const pane = paneById(store.state, paneId)
   const folder = pane ? folderOfPane(store.state, pane) : null

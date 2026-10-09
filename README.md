@@ -37,6 +37,7 @@
 - **Find in the terminal.** **Ctrl+Shift+F** searches a pane's output with match case, whole word and regex, and steps through the matches.
 - **Work with the output.** Ctrl+click a `file:line` path to open it in VS Code at that line, jump between your prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are still typing (**Ctrl+Alt+P**), save a selection as a snippet, and clear the scrollback.
 - **Highlight rules.** Lines with errors, warnings or passing tests are tinted in every pane; change the words and colors in Settings.
+- **Open in your editor.** Every pane header has an **Open in VS Code** button, and the pane menu opens the folder's `.sln` in **Visual Studio** when there is one. The menu shows each action's icon and shortcut.
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
 - **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, `paneon open <layout>` to bring a saved layout back, or `paneon ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.

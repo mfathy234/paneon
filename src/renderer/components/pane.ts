@@ -15,12 +15,15 @@ import {
   showPaneDiff,
   openChanges,
   paneHasRepo,
+  paneSolution,
+  findInPane,
   toggleAgents,
   toggleDetails,
   toggleMaximize
 } from '../actions'
 import { derivePanes, type PaneView } from '../derive'
 import { store } from '../state'
+import { shortcutFor } from '../commands/registry'
 import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
@@ -84,6 +87,7 @@ export class PaneComponent {
       this.attentionWord,
       this.restart,
       h('span', { class: 'spacer' }),
+      iconButton('Open in VS Code', ICONS.code, () => void openPaneFolder(paneId, 'vscode'), 'pane-vscode'),
       iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
@@ -235,44 +239,63 @@ export class PaneComponent {
       this.closeActions()
       void action()
     }
-    const item = (text: string, action: () => unknown): HTMLElement =>
-      h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => run(action) }, text)
-    const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'))
-    const changesItem = item('Changes…', () => openChanges(this.paneId))
+    const item = (text: string, action: () => unknown, svg?: string, commandId?: string): HTMLElement => {
+      const shortcut = commandId ? shortcutFor(commandId) : undefined
+      return h(
+        'button',
+        { class: 'menu-item menu-item-icon', type: 'button', role: 'menuitem', onClick: () => run(action) },
+        h('span', { class: 'menu-icon', 'aria-hidden': 'true' }, svg ? icon(svg) : null),
+        h('span', { class: 'menu-label' }, text),
+        shortcut ? h('kbd', { class: 'menu-kbd' }, shortcut) : null
+      )
+    }
+    const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'), ICONS.code)
+    const studioItem = item('Open in Visual Studio', () => openPaneFolder(this.paneId, 'visualstudio'), ICONS.solution)
+    studioItem.setAttribute('disabled', '')
+    studioItem.title = 'No .sln solution in this folder'
+    void paneSolution(this.paneId).then((solution) => {
+      if (!solution) return
+      studioItem.removeAttribute('disabled')
+      studioItem.title = solution
+    })
+    const changesItem = item('Changes…', () => openChanges(this.paneId), ICONS.commit, 'pane.changes')
     if (!paneHasRepo(this.paneId)) {
       changesItem.setAttribute('disabled', '')
       changesItem.title = 'This pane folder is not a git repository'
     }
-    const snippetItem = item('Save selection as snippet', () => saveSelectionAsSnippet(this.paneId))
+    const snippetItem = item('Save selection as snippet', () => saveSelectionAsSnippet(this.paneId), ICONS.snippet, 'terminal.save-snippet')
     if (!paneTerminal(this.paneId)?.hasSelection()) {
       snippetItem.setAttribute('disabled', '')
       snippetItem.title = 'Select some text in the terminal first'
     }
-    const showDetails = item('Details', () => openDetails(this.paneId))
+    const showDetails = item('Details', () => openDetails(this.paneId), ICONS.info)
     const pinned = this.current?.pane.pinned === true
-    const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId))
+    const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId), ICONS.pin, 'pane.pin')
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
         ? []
         : AGENTS.filter((agent) => agent !== source).map((agent) => {
             const entry = item(continueLabel(agent), () => continueIn(this.paneId, agent))
-            entry.prepend(...[agentMark(agent)].filter((mark): mark is HTMLElement => mark !== null))
+            const mark = agentMark(agent)
+            if (mark) entry.querySelector('.menu-icon')?.append(mark)
             return entry
           })
     this.actionsMenu = h(
       'div',
       { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Pane actions' },
       first,
-      item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer')),
-      item('Open terminal here', () => addTab(this.paneId, 'shell')),
-      item('Show diff', () => showPaneDiff(this.paneId)),
+      studioItem,
+      item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer'), ICONS.folder),
+      item('Open terminal here', () => addTab(this.paneId, 'shell'), ICONS.terminal),
+      item('Find…', () => findInPane(this.paneId), ICONS.search, 'pane.find'),
+      item('Show diff', () => showPaneDiff(this.paneId), ICONS.diff),
       changesItem,
-      item('Export transcript…', () => exportTranscript(this.paneId)),
-      item('Copy last reply', () => copyLastReply(this.paneId)),
-      item('Copy current prompt', () => copyCurrentPrompt(this.paneId)),
+      item('Export transcript…', () => exportTranscript(this.paneId), ICONS.download),
+      item('Copy last reply', () => copyLastReply(this.paneId), ICONS.copy, 'terminal.copy-reply'),
+      item('Copy current prompt', () => copyCurrentPrompt(this.paneId), ICONS.copy, 'terminal.copy-prompt'),
       snippetItem,
-      item('Clear scrollback', () => clearScrollback(this.paneId)),
+      item('Clear scrollback', () => clearScrollback(this.paneId), ICONS.eraser),
       showDetails,
       pinItem,
       ...handoffs

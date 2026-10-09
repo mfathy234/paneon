@@ -32,6 +32,8 @@ export function listCommands(state: AppState): Command[] {
   return all.filter((command) => command.enabled?.(state) !== false)
 }
 
+export const shortcutFor = (id: string): string | undefined => statics.get(id)?.shortcut
+
 export function findCommand(state: AppState, id: string): Command | undefined {
   return listCommands(state).find((command) => command.id === id)
 }

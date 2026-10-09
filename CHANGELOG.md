@@ -15,6 +15,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Ctrl+Alt+C** copies the last reply and **Ctrl+Alt+P** copies the prompt you are typing, without sending it.
 - Save a terminal selection as a snippet, and clear a pane's scrollback without restarting the agent.
 - Highlight rules tint lines with errors, warnings or passing tests; edit them in Settings > Highlights.
+- An **Open in VS Code** button in every pane header, and **Open in Visual Studio** in the pane menu when the folder has a
+  `.sln` solution. The pane menu shows an icon for each action and its keyboard shortcut.
 
 ### Fixed
 

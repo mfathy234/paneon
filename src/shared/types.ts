@@ -204,7 +204,7 @@ export interface ResumeQuery {
   limit?: number
 }
 
-export type QuickOpenKind = 'vscode' | 'explorer'
+export type QuickOpenKind = 'vscode' | 'explorer' | 'visualstudio'
 
 export interface BridgePreview {
   settingsPath: string

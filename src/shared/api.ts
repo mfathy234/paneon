@@ -64,6 +64,7 @@ export interface GridApi {
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
+  findSolution(folder: string): Promise<string | null>
   existingFiles(folder: string, candidates: string[]): Promise<(string | null)[]>
   openFile(folder: string, ref: FileRef): Promise<void>
   notify(request: NotifyRequest): void

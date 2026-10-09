@@ -39,6 +39,7 @@ const api: GridApi = {
   listResumable: (agent, folder) => ipcRenderer.invoke(IPC.resumeList, agent, folder),
   listAllResumable: (query) => ipcRenderer.invoke(IPC.resumeAll, query),
   quickOpen: (kind, folder) => ipcRenderer.invoke(IPC.quickOpen, kind, folder),
+  findSolution: (folder) => ipcRenderer.invoke(IPC.findSolution, folder),
   existingFiles: (folder, candidates) => ipcRenderer.invoke(IPC.filesExist, folder, candidates),
   openFile: (folder, ref) => ipcRenderer.invoke(IPC.filesOpen, folder, ref),
   notify: (request) => ipcRenderer.send(IPC.notify, request),

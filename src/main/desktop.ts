@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { BrowserWindow, Notification, shell } from 'electron'
 import { IPC } from '../shared/ipc'
 import { safeLink } from '../shared/markdown'
@@ -13,11 +14,24 @@ export function logTo(file: string, line: string): void {
   }
 }
 
+export function findSolution(folder: string): string | null {
+  try {
+    return readdirSync(folder).find((name) => /\.(sln|slnx)$/i.test(name)) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function quickOpen(kind: QuickOpenKind, folder: string): Promise<void> {
   const log = process.env.PANEON_OPEN_LOG
   if (log) return logTo(log, JSON.stringify({ kind, folder }))
   if (kind === 'explorer') {
     await shell.openPath(folder)
+    return
+  }
+  if (kind === 'visualstudio') {
+    const solution = findSolution(folder)
+    if (solution) await shell.openPath(join(folder, solution))
     return
   }
   const child = spawn(`code "${folder}"`, { shell: true, detached: true, stdio: 'ignore', windowsHide: true })

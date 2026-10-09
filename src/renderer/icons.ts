@@ -2,6 +2,15 @@ const svg = (size: number, body: string, stroke = 1.75): string =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
 
 export const ICONS = {
+  code: svg(16, '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>'),
+  solution: svg(16, '<path d="M17 3l4 2v14l-4 2-10-8z"/><path d="M7 13l-4 3V8l4 3"/>'),
+  terminal: svg(16, '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>'),
+  diff: svg(16, '<path d="M12 3v12 M6 9h12 M6 20h12"/>'),
+  commit: svg(16, '<circle cx="12" cy="12" r="3.5"/><path d="M3 12h5.5 M15.5 12H21"/>'),
+  download: svg(16, '<path d="M12 3v12 M7 10l5 5 5-5 M5 21h14"/>'),
+  copy: svg(16, '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'),
+  eraser: svg(16, '<path d="M20 20H9"/><path d="M4 15l9-9 6 6-7 7H8z"/>'),
+  info: svg(16, '<circle cx="12" cy="12" r="9"/><path d="M12 11v6 M12 7.5v.5"/>'),
   folder: svg(16, '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
   folderLarge: svg(18, '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
   plus: svg(14, '<path d="M12 5v14 M5 12h14"/>'),
