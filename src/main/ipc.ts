@@ -24,12 +24,14 @@ import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './pro
 import { bridgePreview, bridgeStatus, installBridge, uninstallBridge, type BridgeLocations } from './statusBridge'
 import type { OpsWatcher } from './opsWatcher'
 import type { StatusWatcher } from './statusWatcher'
+import { exportTranscript } from './transcriptExport'
 import { resolveExecutable } from './executables'
 import type { PtyManager } from './ptyManager'
 import { readSessions } from './sessionsWatcher'
 import { appVersion } from './appVersion'
 import type { SettingsStore } from './settingsStore'
 import type { UsageService } from './usage'
+import type { TranscriptRequest } from '../shared/transcript'
 import { USAGE_RANGES, type UsageRange } from '../shared/usage'
 
 function checkFolder(path: string): FolderCheck {
@@ -120,6 +122,7 @@ export function registerIpc(
     return usage.report(known ? range : '7d', settings.get().projects)
   })
   ipcMain.handle(IPC.usageSnapshot, () => usage.snapshot(settings.get().projects))
+  ipcMain.handle(IPC.transcriptExport, (_event, request: TranscriptRequest) => exportTranscript(getWindow(), request))
   ipcMain.handle(IPC.compareProbe, (_event, folder: string) => probeRepo(folder))
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))

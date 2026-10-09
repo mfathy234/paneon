@@ -5,6 +5,7 @@ import type { WorktreeStatus } from './compare'
 import type { OpsSnapshot } from './opsFeed'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
+import type { TranscriptRequest, TranscriptResult } from './transcript'
 import type { UsageRange, UsageReport } from './usage'
 import type {
   AgentKind,
@@ -86,6 +87,7 @@ export interface GridApi {
   openUpdateLink(url: string): Promise<void>
   usageReport(range: UsageRange): Promise<UsageReport>
   usageSnapshot(): Promise<UsageSnapshot>
+  exportTranscript(request: TranscriptRequest): Promise<TranscriptResult>
   compareProbe(folder: string): Promise<RepoProbe>
   compareCreate(folder: string, short: string): Promise<WorktreesResult>
   compareStatus(repo: string, path: string, branch: string): Promise<WorktreeStatus>
