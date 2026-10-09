@@ -9,6 +9,7 @@ import { OnboardingComponent } from './onboarding'
 import { PaletteComponent } from './palette'
 import { QuickPickComponent } from './quickpick'
 import { ResumePickerComponent } from './resumePicker'
+import { SettingsViewComponent } from './settingsView'
 import { SidebarComponent } from './sidebar'
 import { ThemePickerComponent } from './themePicker'
 import { UpdatePopoverComponent } from './updatePopover'
@@ -24,6 +25,7 @@ export class AppShell {
   private readonly projects = new ProjectsViewComponent()
   private readonly agents = new AgentsViewComponent()
   private readonly usage = new UsageViewComponent()
+  private readonly settings = new SettingsViewComponent()
   private readonly quickPick = new QuickPickComponent(() => this.topbar.newSession)
   private readonly resumePicker = new ResumePickerComponent(() => this.topbar.newSession)
   private readonly onboarding = new OnboardingComponent()
@@ -35,7 +37,7 @@ export class AppShell {
   private lastView: AppState['view'] = 'grid'
 
   constructor() {
-    const main = h('div', { class: 'main' }, this.grid.el, this.projects.el, this.agents.el, this.usage.el)
+    const main = h('div', { class: 'main' }, this.grid.el, this.projects.el, this.agents.el, this.usage.el, this.settings.el)
     this.el = h('div', { class: 'app' }, this.topbar.el, h('div', { class: 'body' }, this.sidebar.el, main))
   }
 
@@ -51,6 +53,8 @@ export class AppShell {
     if (state.view === 'agents') this.agents.update(state)
     this.usage.el.hidden = state.view !== 'usage'
     this.usage.update(state)
+    this.settings.el.hidden = state.view !== 'settings'
+    if (state.view === 'settings') this.settings.update(state)
     this.lastView = state.view
     this.grid.update(state)
     this.quickPick.update(state)

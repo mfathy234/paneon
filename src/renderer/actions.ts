@@ -490,6 +490,41 @@ export function showView(view: AppState['view']): void {
   store.patch({ view })
 }
 
+export function openSettings(section?: AppState['settingsSection']): void {
+  store.set((s) => ({
+    ...s,
+    view: 'settings',
+    settingsSection: section ?? s.settingsSection,
+    themePickerOpen: false,
+    updatePopoverOpen: false,
+    layoutsOpen: false
+  }))
+}
+
+export function showSettingsSection(settingsSection: AppState['settingsSection']): void {
+  store.patch({ settingsSection })
+}
+
+export function setPaletteShortcut(paletteShortcut: string): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, paletteShortcut } }))
+  void saveSettings({ paletteShortcut })
+}
+
+export function setSidebarCollapsed(sidebarCollapsed: boolean): void {
+  store.set((s) => ({ ...s, sidebarOverride: null, settings: { ...s.settings, sidebarCollapsed } }))
+  void saveSettings({ sidebarCollapsed })
+}
+
+export function openDataFolder(): void {
+  const folder = store.state.info.userData
+  if (folder) void api.quickOpen('explorer', folder)
+}
+
+export function showFullChangelog(): void {
+  closeWhatsNew()
+  openSettings('changelog')
+}
+
 export function showProjectsTab(projectsTab: AppState['projectsTab']): void {
   store.patch({ projectsTab })
 }

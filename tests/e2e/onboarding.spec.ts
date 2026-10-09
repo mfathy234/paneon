@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { createFakeTools } from '../support/fakeTools'
-import { closeApp, createSandbox, launchApp, runCli, QUIT_BUDGET_MS } from './helpers'
+import { closeApp, createSandbox, launchApp, openSettings, runCli, QUIT_BUDGET_MS } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const readSettings = (userData: string): any => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
@@ -68,7 +68,7 @@ test('skipping keeps the setup closed on the next start and Getting started reop
   try {
     await expect(second.page.locator('.empty h2')).toHaveText('Add a project to get started')
     await expect(second.page.locator('.onboarding')).toHaveCount(0)
-    await second.page.getByRole('button', { name: 'Theme' }).click()
+    await openSettings(second.page, 'general')
     await second.page.locator('#getting-started').click()
     await expect(second.page.getByRole('dialog', { name: 'Set up Paneon' })).toBeVisible()
     await second.page.locator('#ob-open-agents').click()

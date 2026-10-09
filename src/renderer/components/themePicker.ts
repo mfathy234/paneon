@@ -1,20 +1,8 @@
-import {
-  disableBridge,
-  enableBridge,
-  openOnboarding,
-  openWhatsNew,
-  runUpdateAction,
-  setAutoUpdateCheck,
-  setImage,
-  setSessionInfo,
-  setTheme,
-  toggleThemePicker
-} from '../actions'
-import { updateStatusLine } from '../../shared/updates'
+import { setImage, setTheme, toggleThemePicker } from '../actions'
 import { api } from '../api'
 import { THEMES, findTheme } from '../../shared/themes'
 import { h } from '../dom'
-import { store, type AppState } from '../state'
+import type { AppState } from '../state'
 
 const LIGHT_NOTE =
   "Claude Code's own colours follow its /theme setting: run /theme and pick light for best contrast."
@@ -65,16 +53,7 @@ export class ThemePickerComponent {
 
   private render(state: AppState): void {
     const { theme } = state.settings
-    const signature = JSON.stringify([
-      theme.id,
-      theme.image.path,
-      theme.image.enabled,
-      state.settings.sessionInfo,
-      state.bridge,
-      state.settings.autoUpdateCheck,
-      state.update,
-      Math.floor(Date.now() / 60_000)
-    ])
+    const signature = JSON.stringify([theme.id, theme.image.path, theme.image.enabled])
     if (signature === this.signature || !this.root) return
     this.signature = signature
     const active = findTheme(theme.id)
@@ -83,14 +62,7 @@ export class ThemePickerComponent {
       h('h2', { class: 'popover-title' }, 'Theme'),
       h('div', { class: 'theme-list', role: 'radiogroup', 'aria-label': 'Theme' }, ...THEMES.map((t) => this.row(t.id, theme.id))),
       active.kind === 'light' ? h('p', { class: 'note', id: 'light-note' }, LIGHT_NOTE) : null,
-      this.imageSection(state),
-      this.infoSection(state),
-      this.updatesSection(state),
-      h(
-        'div',
-        { class: 'image-section' },
-        h('button', { class: 'btn ghost small', type: 'button', id: 'getting-started', onClick: () => openOnboarding() }, 'Getting started…')
-      )
+      this.imageSection(state)
     ]
     this.root.replaceChildren(...children.filter((c): c is HTMLElement => c !== null))
     if (focusedId) document.getElementById(focusedId)?.focus()
@@ -137,59 +109,6 @@ export class ThemePickerComponent {
       ),
       this.slider('Dim', 'image-dim', 0, 90, 1, image.dim, '%', (value) => setImage({ dim: value })),
       this.slider('Blur', 'image-blur', 0, 20, 1, image.blur, 'px', (value) => setImage({ blur: value }))
-    )
-  }
-
-  private refresh(): void {
-    this.signature = ''
-    if (this.root) this.render(store.state)
-  }
-
-  private checkbox(id: string, label: string, checked: boolean, disabled: boolean, onChange: (value: boolean) => void): HTMLElement {
-    const input = h('input', { type: 'checkbox', id, disabled })
-    input.checked = checked
-    input.addEventListener('change', () => onChange(input.checked))
-    return h('label', { class: 'check', for: id }, input, label)
-  }
-
-  private infoSection(state: AppState): HTMLElement {
-    const { bridge, settings } = state
-    const info = settings.sessionInfo
-    const toggleBridge = (on: boolean): void => {
-      void (on ? enableBridge() : disableBridge()).finally(() => this.refresh())
-    }
-    return h(
-      'div',
-      { class: 'image-section info-section' },
-      h('h3', { class: 'popover-subtitle' }, 'Session info'),
-      this.checkbox('bridge-toggle', 'Show live session info', bridge.installed, bridge.busy, toggleBridge),
-      h('p', { class: 'hint' }, 'Adds a status line to ~/.claude/settings.json after you confirm. Turning it off restores the old one.'),
-      bridge.error ? h('p', { class: 'note error', id: 'bridge-error', role: 'alert' }, bridge.error) : null,
-      bridge.note ? h('p', { class: 'note', id: 'bridge-note' }, bridge.note) : null,
-      this.checkbox('notify-toggle', 'Notify when a session is done or needs you', info.notifications, false, (value) =>
-        setSessionInfo({ notifications: value })
-      ),
-      this.checkbox('sound-toggle', 'Play a sound with notifications', info.sound, !info.notifications, (value) =>
-        setSessionInfo({ sound: value })
-      )
-    )
-  }
-
-  private updatesSection(state: AppState): HTMLElement {
-    const { update, settings } = state
-    const busy = update.status === 'checking' || update.status === 'downloading' || update.mode === 'dev'
-    return h(
-      'div',
-      { class: 'image-section updates-section' },
-      h('h3', { class: 'popover-subtitle' }, 'Updates'),
-      this.checkbox('auto-update-toggle', 'Check for updates automatically', settings.autoUpdateCheck, false, setAutoUpdateCheck),
-      h('p', { class: 'hint', id: 'update-status' }, updateStatusLine(update, Date.now())),
-      h(
-        'div',
-        { class: 'image-file' },
-        h('button', { class: 'btn ghost small', type: 'button', id: 'check-now', disabled: busy, onClick: () => void runUpdateAction('check') }, 'Check now'),
-        h('button', { class: 'btn ghost small', type: 'button', id: 'whats-new', onClick: () => openWhatsNew() }, "What's new")
-      )
     )
   }
 

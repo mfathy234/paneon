@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
-import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
+import { APP_VERSION, closeApp, createSandbox, launchApp, openSettings, type Sandbox } from './helpers'
 
 const RELEASE_URL = 'https://github.com/mfathy234/paneon/releases/tag/v9.9.0'
 const NOTES = [
@@ -69,11 +69,6 @@ const pill = (page: Page) => page.locator('#update-pill')
 async function openPopover(page: Page): Promise<void> {
   if ((await page.locator('.update-popover').count()) === 0) await pill(page).click()
   await expect(page.locator('.update-popover')).toBeVisible()
-}
-
-async function openThemePopover(page: Page): Promise<void> {
-  if ((await page.locator('.theme-picker').count()) === 0) await page.getByRole('button', { name: 'Theme' }).click()
-  await expect(page.locator('.theme-picker')).toBeVisible()
 }
 
 function exited(app: ElectronApplication): Promise<void> {
@@ -175,7 +170,7 @@ test('a failed manual check shows Update failed and Try again checks again', asy
   const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, { check: 'error', checkError: 'Network unreachable' }, { PANEON_UPDATE_START_DELAY_MS: '3600000' }))
   try {
     await expect(pill(page)).toBeHidden()
-    await openThemePopover(page)
+    await openSettings(page, 'updates')
     await page.locator('#check-now').click()
     await expect(pill(page)).toHaveText('Update failed')
     await openPopover(page)
@@ -198,7 +193,7 @@ test('Later hides the pill until a newer version than the dismissed one is found
     await expect(pill(page)).toBeHidden()
     await expect(page.locator('.update-popover')).toHaveCount(0)
 
-    await openThemePopover(page)
+    await openSettings(page, 'updates')
     await page.locator('#check-now').click()
     await expect.poll(() => hookCall<number>(app, 'hook.checks')).toBe(2)
     await expect(page.locator('#update-status')).toContainText('update available')
@@ -231,7 +226,7 @@ test('the portable build points to GitHub and never downloads', async () => {
     expect(JSON.parse(lines(sandbox.openLog)[0]).link).toBe(RELEASE_URL)
     expect(await hookCall<number>(app, 'hook.downloads')).toBe(0)
 
-    await openThemePopover(page)
+    await openSettings(page, 'updates')
     await expect(page.locator('#update-status')).toContainText('portable build: updates from GitHub')
   } finally {
     await closeApp(app)
@@ -246,7 +241,7 @@ test('turning off automatic checks stops the schedule, Check now still works', a
   )
   try {
     await expect.poll(() => hookCall<number>(app, 'hook.checks')).toBeGreaterThanOrEqual(2)
-    await openThemePopover(page)
+    await openSettings(page, 'updates')
     await expect(page.locator('#auto-update-toggle')).toBeChecked()
     await expect(page.locator('#update-status')).toContainText('up to date · checked')
     await page.locator('#auto-update-toggle').uncheck()
@@ -271,7 +266,7 @@ test('a development build has no pill and Check now is disabled', async () => {
   const { app, page } = await launchApp(sandbox)
   try {
     await expect(pill(page)).toBeHidden()
-    await openThemePopover(page)
+    await openSettings(page, 'updates')
     await expect(page.locator('#update-status')).toContainText('updates are off')
     await expect(page.locator('#check-now')).toBeDisabled()
   } finally {
@@ -310,7 +305,7 @@ test('after an update the What is new dialog lists every version since the one y
   const second = await launchApp(sandbox)
   try {
     await expect(second.page.locator('.whats-new')).toHaveCount(0)
-    await openThemePopover(second.page)
+    await openSettings(second.page, 'changelog')
     await second.page.locator('#whats-new').click()
     const reopened = second.page.getByRole('dialog', { name: `What's new in Paneon ${version}` })
     await expect(reopened).toBeVisible()

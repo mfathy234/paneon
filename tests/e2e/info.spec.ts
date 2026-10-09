@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import { activeTermId, bufferText, closeApp, closeBounded, createSandbox, feedTerminal, launchApp, QUIT_BUDGET_MS, type Sandbox } from './helpers'
+import { activeTermId, bufferText, closeApp, closeBounded, createSandbox, feedTerminal, launchApp, openSettings, closeSettings, QUIT_BUDGET_MS, type Sandbox } from './helpers'
 
 const SCREENS = 'test-results/screens'
 const NEW_IN_SMOKE = /^New (Claude|Codex|Gemini) session in Smoke$/
@@ -49,10 +49,6 @@ function writeStatus(sandbox: Sandbox, sessionId: string): void {
   writeFileSync(join(dir, `${sessionId}.json`), JSON.stringify(payload), 'utf8')
 }
 
-async function openTheme(page: Page): Promise<void> {
-  if ((await page.locator('.theme-picker').count()) === 0) await page.getByRole('button', { name: 'Theme' }).click()
-  await expect(page.locator('.theme-picker')).toBeVisible()
-}
 
 test('live session info: confirmation, install, info strip, limits, git changes and restore', async () => {
   const sandbox = createSandbox()
@@ -72,7 +68,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
     await expect(page.locator('.topbar-limits')).toBeHidden()
 
-    await openTheme(page)
+    await openSettings(page, 'notifications')
     await page.locator('#bridge-toggle').click()
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toContainText('~/.claude/settings.json')
@@ -90,7 +86,7 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     expect(edited.keep).toBe(1)
     expect(edited.statusLine.command).toContain('statusline-bridge.js')
     expect(existsSync(join(sandbox.claudeHome, 'settings.json.paneon-backup'))).toBe(true)
-    await page.keyboard.press('Escape')
+    await closeSettings(page)
 
     writeSession(sandbox, 'sess-info-1', 'idle')
     writeStatus(sandbox, 'sess-info-1')
@@ -104,11 +100,11 @@ test('live session info: confirmation, install, info strip, limits, git changes 
     expect(await page.locator('.pane-info').evaluate((el) => el.getBoundingClientRect().height)).toBe(22)
     await page.screenshot({ path: join(SCREENS, '13-info-strip.png') })
 
-    await openTheme(page)
+    await openSettings(page, 'notifications')
     await page.locator('#bridge-toggle').click()
     await expect(page.locator('#bridge-toggle')).not.toBeChecked()
     expect(readJson(join(sandbox.claudeHome, 'settings.json'))).toEqual({ keep: 1, statusLine: previous })
-    await page.keyboard.press('Escape')
+    await closeSettings(page)
     await expect(page.locator('.pane-info .info-model')).toHaveCount(0)
     await expect(page.locator('.pane-info .info-changes')).toHaveCount(1)
     await expect(page.locator('.topbar-limits')).toBeHidden()
@@ -122,7 +118,7 @@ test('settings.json that does not parse is reported inline and left untouched', 
   writeFileSync(join(sandbox.claudeHome, 'settings.json'), '{ "broken": ,, }', 'utf8')
   const { app, page } = await launchApp(sandbox)
   try {
-    await openTheme(page)
+    await openSettings(page, 'notifications')
     await page.locator('#bridge-toggle').click()
     await expect(page.locator('#bridge-error')).toContainText('could not be parsed')
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
@@ -193,10 +189,10 @@ test('turning notifications off silences them', async () => {
     const add = page.getByRole('button', { name: NEW_IN_SMOKE })
     await add.click()
     await add.click()
-    await openTheme(page)
+    await openSettings(page, 'notifications')
     await page.locator('#notify-toggle').click()
     await expect(page.locator('#sound-toggle')).toBeDisabled()
-    await page.keyboard.press('Escape')
+    await closeSettings(page)
     await expect.poll(() => readJson(join(sandbox.userData, 'settings.json')).sessionInfo?.notifications).toBe(false)
     await page.locator('.pane').nth(1).getByRole('button', { name: 'Maximize pane' }).click()
     writeSession(sandbox, 'sess-quiet-1', 'busy')

@@ -50,7 +50,9 @@ export interface PaneState {
 
 export type QuickPickMode = 'new' | 'resume'
 
-export type View = 'grid' | 'projects' | 'agents' | 'usage'
+export type View = 'grid' | 'projects' | 'agents' | 'usage' | 'settings'
+
+export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'changelog' | 'about'
 
 export type ProjectsTab = 'projects' | 'snippets'
 
@@ -81,6 +83,7 @@ export interface AppState {
   focusedId: string | null
   maximizedId: string | null
   view: View
+  settingsSection: SettingsSection
   projectsTab: ProjectsTab
   sessions: SessionFile[]
   codexSessions: CodexSession[]
@@ -119,6 +122,7 @@ export const initialState = (): AppState => ({
   focusedId: null,
   maximizedId: null,
   view: 'grid',
+  settingsSection: 'general',
   projectsTab: 'projects',
   sessions: [],
   codexSessions: [],

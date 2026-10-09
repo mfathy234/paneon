@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawn } from 'node:child_process'
-import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test'
 
 export interface Sandbox {
   root: string
@@ -151,4 +151,20 @@ export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.r
     child.on('error', reject)
     child.on('close', (code) => resolveResult({ code, out: out.trim(), err: err.trim() }))
   })
+}
+
+export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'changelog' | 'about'
+
+export async function openSettings(page: Page, section: SettingsSectionId = 'general'): Promise<void> {
+  const button = page.locator('#settings-button')
+  if ((await button.getAttribute('aria-pressed')) !== 'true') await button.click()
+  await expect(page.locator('.settings-view')).toBeVisible()
+  await page.locator(`#settings-tab-${section}`).click()
+  await expect(page.locator(`#settings-tab-${section}`)).toHaveAttribute('aria-selected', 'true')
+}
+
+export async function closeSettings(page: Page): Promise<void> {
+  const button = page.locator('#settings-button')
+  if ((await button.getAttribute('aria-pressed')) === 'true') await button.click()
+  await expect(page.locator('.settings-view')).toBeHidden()
 }
