@@ -6,6 +6,7 @@ import {
   focusRelative,
   focusPaneAt,
   focusNextAttention,
+  findInPane,
   movePane,
   movePaneBy,
   openDetails,
@@ -161,6 +162,10 @@ export function installBuiltinCommands(): void {
       searchOnly: true,
       enabled: hasPane,
       run: () => void (store.state.focusedId && movePane(store.state.focusedId, store.state.panes.length - 1))
+    },
+    {
+      ...focusedAction('pane.find', 'Find in the terminal', findInPane, 'search text output'),
+      ...withKeys('Ctrl+Shift+F')
     },
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),

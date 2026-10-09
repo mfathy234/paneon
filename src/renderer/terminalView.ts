@@ -4,6 +4,7 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import { insertionData } from '../shared/snippets'
 import { h } from './dom'
+import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 
 export const TERMINAL_FONT =
@@ -26,6 +27,7 @@ export class TerminalView {
   private readonly term: Terminal
   private readonly fitAddon = new FitAddon()
   private readonly observer: ResizeObserver
+  private readonly search: TerminalSearch
   private opened = false
   private frame = 0
 
@@ -55,7 +57,16 @@ export class TerminalView {
     this.observer = new ResizeObserver(() => this.scheduleFit())
     this.el.addEventListener('wheel', (event) => this.handleWheel(event), { capture: true, passive: false })
     this.el.addEventListener('focusin', () => callbacks.onFocus())
+    this.search = new TerminalSearch(this.term, this.el)
     this.applyBundle(bundle)
+  }
+
+  openSearch(): void {
+    this.search.open()
+  }
+
+  closeSearch(): void {
+    this.search.close()
   }
 
   get cols(): number {
@@ -158,6 +169,7 @@ export class TerminalView {
   dispose(): void {
     cancelAnimationFrame(this.frame)
     this.observer.disconnect()
+    this.search.dispose()
     this.term.dispose()
     this.el.remove()
   }

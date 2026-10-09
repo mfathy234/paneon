@@ -368,6 +368,11 @@ export function focusNextAttention(): boolean {
   return target !== null
 }
 
+export function findInPane(paneId: string): void {
+  const pane = paneById(store.state, paneId)
+  if (pane) getTerminal(pane.activeTabId)?.openSearch()
+}
+
 export function focusPaneAt(index: number): void {
   const pane = store.state.panes[index]
   if (pane) focusPane(pane.id)
