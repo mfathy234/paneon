@@ -3,6 +3,7 @@ import { derivePanes } from './derive'
 import { store } from './state'
 
 const REFRESH_MS = 60_000
+const CHECK_MS = 1_000
 
 export async function refreshUsage(): Promise<void> {
   try {
@@ -23,12 +24,17 @@ function paneSignature(): { ids: string; busy: Set<string> } {
 
 export function installUsageSnapshot(): void {
   let known = paneSignature()
-  store.subscribe(() => {
+  let pending: ReturnType<typeof setTimeout> | null = null
+  const check = (): void => {
+    pending = null
     const next = paneSignature()
     const settled = [...known.busy].some((id) => !next.busy.has(id))
     const changed = next.ids !== known.ids
     known = next
     if (settled || changed) void refreshUsage()
+  }
+  store.subscribe(() => {
+    pending ??= setTimeout(check, CHECK_MS)
   })
   setInterval(() => {
     if (document.visibilityState === 'visible') void refreshUsage()

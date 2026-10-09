@@ -3,6 +3,31 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Resizable panes. Drag the border between columns or rows, or focus it and use the arrow keys; double-click resets.
+  Sizes are kept per arrangement, across restarts and in saved layouts.
+- Pin a pane from its menu or the palette. It stays beside whichever pane you maximize.
+- Drag a pane by its header to reorder the grid, and drag tabs along the tab strip. Esc cancels.
+- **Ctrl+Shift+J** goes to the next pane that needs you.
+- Session time, tokens and Claude Code cost in each pane's strip, and today's total per project in the sidebar.
+- **Export transcript...** saves a session as Markdown or HTML with its prompts, replies, tool calls and changed files.
+- A Settings view (**Ctrl+,**) with general options, notifications and live session info, full access per agent,
+  updates, the full changelog and where your data lives. The What's new dialog links to the full changelog.
+
+### Changed
+
+- Notifications, live session info, updates and Getting started moved from the Theme menu to Settings.
+
+### Fixed
+
+- Ctrl+V with a screenshot on the clipboard pasted nothing. The image is now saved and its path pasted, so the agent
+  attaches it.
+- Removing a compare worktree right after closing its pane could fail with "Permission denied" on Windows. Paneon now
+  waits for the folder to be released.
+
 ## [0.6.0] - 2026-10-09
 
 ### Added

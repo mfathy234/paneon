@@ -198,7 +198,10 @@ export class TerminalView {
     }
     if (event.ctrlKey && !event.altKey && key === 'v') {
       event.preventDefault()
-      void this.callbacks.readClipboard().then((text) => text && this.term.paste(text))
+      void this.callbacks
+        .readClipboard()
+        .then((text) => text && this.term.paste(text))
+        .catch(() => undefined)
       return false
     }
     if (event.shiftKey && !event.ctrlKey && !event.altKey && event.key === 'Enter') {

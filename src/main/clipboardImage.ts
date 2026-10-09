@@ -29,9 +29,9 @@ async function readImage(): Promise<Buffer | null> {
 }
 
 export async function readClipboardContent(): Promise<ClipboardContent> {
-  const text = await clipboard.readText()
+  const text = await clipboard.readText().catch(() => '')
   if (text) return { kind: 'text', text }
-  const image = await readImage()
+  const image = await readImage().catch(() => null)
   if (!image) return { kind: 'empty' }
   const dir = pasteDir()
   mkdirSync(dir, { recursive: true })

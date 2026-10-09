@@ -81,7 +81,8 @@ export class SettingsViewComponent {
     )
   }
 
-  update(state: AppState): void {
+  update(state: AppState, force = false): void {
+    if (!force && this.editingShortcut()) return
     const signature = JSON.stringify([
       state.settingsSection,
       state.settings.paletteShortcut,
@@ -94,7 +95,6 @@ export class SettingsViewComponent {
       state.info.version,
       state.info.userData,
       this.shortcutError,
-      this.shortcutDraft,
       Math.floor(Date.now() / 60_000)
     ])
     if (signature === this.signature) return
@@ -104,7 +104,12 @@ export class SettingsViewComponent {
 
   private refresh(): void {
     this.signature = ''
-    this.update(store.state)
+    this.update(store.state, true)
+  }
+
+  private editingShortcut(): boolean {
+    const active = document.activeElement
+    return active instanceof HTMLElement && active.id === 'palette-shortcut' && this.el.contains(active)
   }
 
   private render(state: AppState): void {

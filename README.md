@@ -23,17 +23,21 @@
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Plans and sub-agents at a glance.** With the optional ops feed, panes show plan progress and a drawer of running sub-agents; a details panel shows context, limits, changed files and the last build and test result.
-- **Arrange panes your way.** Move a pane to any position from the **Move pane** button in its header or from the keyboard, so the wide bottom pane holds the session you want. Switch panes with **Ctrl+Tab** or jump straight to one with **Ctrl+1** to **Ctrl+9**.
+- **Arrange panes your way.** Drag the borders between panes to resize them, drag a pane by its header or a tab along its strip to reorder, or use the **Move pane** button and the keyboard. Pin a pane so it stays beside whichever pane you maximize. Switch panes with **Ctrl+Tab**, jump to one with **Ctrl+1** to **Ctrl+9**, or to the next one waiting on you with **Ctrl+Shift+J**.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
 - **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `paneon open <layout>`.
 - **Prompt snippets.** Keep short prompts with `{{selection}}`, `{{branch}}`, `{{project}}` and `{{folder}}` variables and insert one into the focused terminal with **Alt+1** to **Alt+9**, typed but not sent.
 - **Ask two agents.** Send one prompt to two agents at once, each optionally in its own git worktree, watch them side by side and keep one, keep both or diff them.
 - **Continue in another agent.** Hand a session over to Codex, Gemini or Claude with an editable summary of the goal, the files touched, what is done and left, the last error and the recent output.
+- **Cost and time at a glance.** Every pane shows how long its session has run and its tokens (and cost for Claude Code), and each project in the sidebar shows today's total.
+- **Export a transcript.** Save a session as Markdown or HTML with its prompts, replies, tool calls and the files it changed.
+- **Paste screenshots.** Ctrl+V with an image on the clipboard hands it to the agent in the focused tab.
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
 - **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, `paneon open <layout>` to bring a saved layout back, or `paneon ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
 - **Install and update the agents.** The **Agents** view shows the installed and latest version of each CLI and runs the install or update in a visible shell tab. Choose per agent whether sessions start with full access, on by default for Claude Code and Codex.
+- **Settings in one place.** A Settings view (Ctrl+,) for the palette shortcut, notifications and live session info, full access per agent, updates, the full changelog and where your data lives.
 - **Themes.** Eight themes (Grid Dark, Nord, Tokyo Night, Catppuccin Mocha, Solarized Dark, Gruvbox Dark, GitHub Light, Solarized Light) with contrast checks, plus an optional background image.
 - **Local only.** No account, no telemetry, nothing leaves your machine.
 
@@ -132,9 +136,11 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 | Ctrl+1 to Ctrl+9 | Focus pane 1 to 9 |
 | Ctrl+Shift+Alt+Left / Right | Move the focused pane one position earlier / later |
 | Ctrl+Shift+Alt+Home / End | Move the focused pane to the first / last position |
+| Ctrl+Shift+J | Go to the next pane that needs you (a permission prompt first, then a finished session) |
+| Ctrl+, | Open Settings |
 | Ctrl+wheel, Ctrl+=, Ctrl+-, Ctrl+0 | Zoom the focused pane (10-28, default 15), remembered per project |
 | Ctrl+click on a link | Open it in the browser |
-| Ctrl+C with a selection, Ctrl+V | Copy and paste |
+| Ctrl+C with a selection, Ctrl+V | Copy and paste. With an image on the clipboard, Ctrl+V saves it as a PNG and pastes its path (as `@path` for Gemini CLI) |
 | Shift+Enter | Newline in the Claude prompt |
 
 ### Layout
@@ -148,7 +154,11 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 | 5-6 | 3 x 2 |
 | 7+ | 3 columns, the grid scrolls |
 
-Panes fill the layout in order. To change which session sits where, click **Move pane** in a pane's header and pick a position, or use Ctrl+Shift+Alt+Left / Right; the order is saved with the workspace.
+Panes fill the layout in order. To change which session sits where, drag a pane by its header onto another pane, click **Move pane** in its header and pick a position, or use Ctrl+Shift+Alt+Left / Right. Tabs reorder by dragging them along the tab strip. Esc cancels a drag, and the order is saved with the workspace.
+
+Drag the border between two columns or rows to resize them; panes stop at about 260 x 140 pixels. A border also takes keyboard focus: the arrow keys move it, Shift moves it further, and a double-click resets that direction to equal sizes. Sizes are remembered for each arrangement (2 side by side, 2 x 2 and so on), kept across restarts and saved with layouts. There are no borders to drag while a pane is maximized or when the grid scrolls.
+
+**Pin pane** in a pane's ⋯ menu (or the palette) keeps it on screen: when you maximize another pane, the pinned one stays beside it as a narrow column. One pane can be pinned at a time, and the pin is remembered.
 
 ### Resuming a session
 
@@ -190,6 +200,18 @@ A comparison survives a restart: the pair, the prompt and the worktree folders a
 ### Continue in another agent
 
 The pane menu (the three dots) and the palette offer **Continue in Codex**, **Gemini** or **Claude**, whichever the pane is not. Paneon builds a summary from what it knows: the session title as **Goal**, **Files touched** from `git diff HEAD --numstat` and untracked files, **What's done** and **What's left** from the ops feed's plan and last build or test result, **Last error** (a failed check, else the last line of the terminal that looks like an error) and the last 40 lines of terminal output without colours. You can edit all of it before **Start <agent> with this** opens a new pane in the same folder with the text as the first message. The pane you continued from keeps running, and the new one shows a muted **from <agent>** chip. The summary is limited to 6000 characters.
+
+### Cost and time per pane
+
+The strip under each agent pane's header shows how long the session has run and its tokens, read from the agents' own history files, plus the cost of Claude Code sessions, which comes from live session info (Settings > Notifications & session info). Codex CLI and Gemini CLI show tokens only. Each project in the sidebar shows today's total under its name, with a breakdown by agent on hover; it is hidden when the project has no usage today. The numbers refresh every minute and when a session finishes.
+
+### Exporting a transcript
+
+**Export transcript...** in a pane's ⋯ menu or the palette saves the active tab's session. Pick Markdown or HTML in the save dialog. The file starts with the title, agent, model, project, folder, times and session id, then lists the prompts and replies in order, with each tool call on one line. If the folder is a git repository, a **Changes** section with `git diff --stat` follows. The HTML file is a single page that works offline. A tab without a session file exports the visible terminal text instead and says so.
+
+### Settings
+
+Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Paneon keeps there). The Theme menu holds the themes and the background image.
 
 ### Usage
 

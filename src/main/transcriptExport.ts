@@ -84,7 +84,7 @@ async function codexTitle(id: string): Promise<string | undefined> {
 
 async function loadSession(request: TranscriptRequest): Promise<{ parsed: ParsedSession; found: Found } | null> {
   const { agent, sessionId, folder } = request
-  if (!sessionId || agent === 'shell') return null
+  if (!sessionId || agent === 'shell' || !/^[\w-]+$/.test(sessionId)) return null
   const found =
     agent === 'claude' ? await findClaude(sessionId, folder) : agent === 'codex' ? await findCodex(sessionId) : await findGemini(sessionId, folder)
   if (!found) return null
