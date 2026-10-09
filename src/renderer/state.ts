@@ -103,6 +103,7 @@ export interface AppState {
   usage: UsageSnapshot
   attention: Record<string, Attention>
   waiting: Record<string, boolean>
+  contextDismissed: Record<string, number>
   bridge: BridgeState
   agents: AgentsState
   windowFocused: boolean
@@ -146,6 +147,7 @@ export const initialState = (): AppState => ({
   usage: emptySnapshot(),
   attention: {},
   waiting: {},
+  contextDismissed: {},
   bridge: { installed: false, busy: false, error: null, note: null },
   agents: { report: null, checking: false },
   windowFocused: true,

@@ -3973,3 +3973,40 @@ body.dragging-ui {
 .instr-error {
   color: var(--danger);
 }
+
+.info-gauge.ctx-amber {
+  color: var(--busy);
+}
+
+.info-gauge.ctx-red {
+  color: var(--danger);
+}
+
+.pane-hint {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.pane-hint[hidden] {
+  display: none;
+}
+
+.pane-hint-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane.file-drop {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}

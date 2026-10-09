@@ -43,6 +43,7 @@ export interface GridApi {
   updateSettings(patch: Partial<Settings>): Promise<Settings>
   pickFolder(): Promise<string | null>
   pickImage(): Promise<string | null>
+  pathForFile(file: File): string
   checkFolder(path: string): Promise<FolderCheck>
   gitBranch(folder: string): Promise<string | null>
   listSessions(): Promise<SessionFile[]>

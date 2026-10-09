@@ -21,6 +21,7 @@ import {
 import { CODEX_MARK, GEMINI_MARK } from '../shared/agents'
 import { api } from './api'
 import { installAttention } from './attention'
+import { guardWindowDrops } from './fileDrop'
 import { installOps } from './ops'
 import { AppShell } from './components/appShell'
 import { toast } from './components/toast'
@@ -88,6 +89,7 @@ async function boot(): Promise<void> {
   setInterval(() => void refreshGitChanges(), GIT_CHANGES_POLL_MS)
   document.addEventListener('visibilitychange', () => void refreshGitChanges())
   installAttention()
+  guardWindowDrops()
   installUsageSnapshot()
   void installOps()
   installBuiltinCommands()
