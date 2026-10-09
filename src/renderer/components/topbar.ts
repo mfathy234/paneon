@@ -136,7 +136,9 @@ export class TopBarComponent {
     this.updatePill.setAttribute('aria-expanded', String(state.updatePopoverOpen))
     this.pillText.textContent = pillLabel(update)
     this.pillLine.style.width = update.status === 'downloading' ? `${Math.round(update.percent)}%` : '0'
-    this.updatePill.replaceChildren(this.pillText, this.pillLine)
+    if (this.pillText.parentElement !== this.updatePill || this.pillLine.parentElement !== this.updatePill) {
+      this.updatePill.replaceChildren(this.pillText, this.pillLine)
+    }
   }
 
   private readonly outside = (event: Event): void => {
