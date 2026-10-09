@@ -35,6 +35,7 @@ import { forgetOutput } from './ptyActivity'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
 import { api } from './api'
+import { openChangesDialog } from './components/changesDialog'
 import { confirmDialog } from './components/dialogs'
 import { toast } from './components/toast'
 import { derivePanes, matchAll } from './derive'
@@ -246,6 +247,24 @@ export async function openPaneFolder(paneId: string, kind: QuickOpenKind): Promi
 
 export async function showPaneDiff(paneId: string): Promise<void> {
   await addTab(paneId, 'shell', 'git diff\r')
+}
+
+export function paneHasRepo(paneId: string): boolean {
+  const pane = paneById(store.state, paneId)
+  const folder = pane ? folderOfPane(store.state, pane) : null
+  return folder !== null && store.state.gitChanges[folder] != null
+}
+
+export async function openChanges(paneId: string): Promise<void> {
+  const folder = paneFolder(paneId)
+  const view = derivePanes(store.state).find((v) => v.pane.id === paneId)
+  if (!folder || !view) return
+  if (!paneHasRepo(paneId)) {
+    toast('This pane folder is not a git repository.')
+    return
+  }
+  await openChangesDialog({ folder, title: view.title, onChanged: () => void refreshGitChanges() })
+  void refreshGitChanges()
 }
 
 export function setActiveTab(paneId: string, termId: string): void {

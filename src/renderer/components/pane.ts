@@ -13,6 +13,8 @@ import {
   setActiveTab,
   togglePinned,
   showPaneDiff,
+  openChanges,
+  paneHasRepo,
   toggleAgents,
   toggleDetails,
   toggleMaximize
@@ -168,6 +170,7 @@ export class PaneComponent {
     this.infoSignature = signature
     const items = paneInfoStrip(view.info, {
       title: view.title.toUpperCase(),
+      onOpenChanges: () => void openChanges(this.paneId),
       onToggleAgents: () => {
         const tabId = view.primaryTabId
         toggleAgents(tabId)
@@ -233,6 +236,11 @@ export class PaneComponent {
     const item = (text: string, action: () => unknown): HTMLElement =>
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => run(action) }, text)
     const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'))
+    const changesItem = item('Changes…', () => openChanges(this.paneId))
+    if (!paneHasRepo(this.paneId)) {
+      changesItem.setAttribute('disabled', '')
+      changesItem.title = 'This pane folder is not a git repository'
+    }
     const showDetails = item('Details', () => openDetails(this.paneId))
     const pinned = this.current?.pane.pinned === true
     const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId))
@@ -252,6 +260,7 @@ export class PaneComponent {
       item('Open in Explorer', () => openPaneFolder(this.paneId, 'explorer')),
       item('Open terminal here', () => addTab(this.paneId, 'shell')),
       item('Show diff', () => showPaneDiff(this.paneId)),
+      changesItem,
       item('Export transcript…', () => exportTranscript(this.paneId)),
       showDetails,
       pinItem,

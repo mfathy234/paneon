@@ -3353,6 +3353,161 @@ polyline.usage-line,
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+button.info-changes {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.info-changes:hover {
+  color: var(--text);
+}
+
+.changes-dialog {
+  width: 680px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.changes-dialog h2 {
+  margin: 0;
+}
+
+.changes-branch {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.changes-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.changes-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.changes-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.changes-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.changes-row + .changes-row,
+.changes-item + .changes-row,
+.changes-row + .changes-item {
+  border-top: 1px solid var(--border);
+}
+
+.changes-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.changes-letter {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.changes-letter.letter-A,
+.changes-letter.letter-U {
+  color: var(--accent);
+}
+
+.changes-letter.letter-D,
+.changes-letter.letter-\! {
+  color: var(--danger);
+}
+
+.changes-counts {
+  flex: none;
+  font-family: var(--font-mono);
+}
+
+.changes-counts .add {
+  color: var(--accent);
+}
+
+.changes-counts .del {
+  color: var(--danger);
+}
+
+.dialog .btn.changes-diff-toggle {
+  flex: none;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.changes-diff {
+  margin: 0;
+  padding: 8px;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre;
+}
+
+.changes-empty {
+  margin: 0;
+  padding: 12px 0;
+}
+
+.changes-message {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.changes-foot {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+}
+
+.changes-subject.over {
+  color: var(--busy);
+}
+
+.dialog .changes-error {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+
+.changes-actions {
+  flex-wrap: wrap;
+}
+
 body.dragging-ui {
   user-select: none;
   cursor: grabbing;
