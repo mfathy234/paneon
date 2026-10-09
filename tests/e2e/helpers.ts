@@ -88,8 +88,11 @@ export async function launchApp(
       PANEON_NOTIFY_LOG: sandbox.notifyLog,
       PANEON_QUIT_LOG: sandbox.quitLog,
       PANEON_PIPE: sandbox.pipe,
-      GIT_CONFIG_NOSYSTEM: '1',
       GCM_INTERACTIVE: 'never',
+      GIT_AUTHOR_NAME: 'Test User',
+      GIT_AUTHOR_EMAIL: 'test@example.invalid',
+      GIT_COMMITTER_NAME: 'Test User',
+      GIT_COMMITTER_EMAIL: 'test@example.invalid',
       ...extraEnv
     }
   })
