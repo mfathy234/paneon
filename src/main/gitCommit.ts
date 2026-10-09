@@ -153,10 +153,11 @@ export async function discardFiles(request: DiscardRequest): Promise<GitResult> 
   const added = entries.filter((entry) => !entry.untracked && (entry.index === 'A' || entry.index === 'R' || entry.index === 'C'))
   const restore = entries.filter((entry) => !entry.untracked && !added.includes(entry)).map((entry) => entry.path)
   for (const entry of added) if (entry.origPath && entry.index === 'R') restore.push(entry.origPath)
+  const doomed: string[] = []
   for (const entry of untracked) {
     const full = insideRoot(root, entry.path)
     if (!full) return { ok: false, error: `Path is outside the repository: ${entry.path}` }
-    await rm(full, { force: true })
+    doomed.push(full)
   }
   if (added.length > 0) {
     const removed = await git(root, ['rm', '-f', '-q', '--', ...added.map((entry) => entry.path)])
@@ -165,6 +166,12 @@ export async function discardFiles(request: DiscardRequest): Promise<GitResult> 
   if (restore.length > 0) {
     const restored = await git(root, ['restore', '--source=HEAD', '--staged', '--worktree', '--', ...restore])
     if (!restored.ok) return { ok: false, error: restored.message }
+  }
+  try {
+    for (const full of doomed) await rm(full, { recursive: true, force: true })
+  } catch (error) {
+    forgetChanges()
+    return { ok: false, error: `Could not delete an untracked file: ${(error as Error).message}` }
   }
   forgetChanges()
   return { ok: true }

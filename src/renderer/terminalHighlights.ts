@@ -67,6 +67,7 @@ export class TerminalHighlights {
     if (buffer.type !== 'normal') return this.dropMarker()
     if (!settings.enabled || settings.rules.length === 0) return this.resetMarker()
     const cursor = buffer.baseY + buffer.cursorY
+    if (this.marker && !this.marker.isDisposed && cursor < this.marker.line) this.dropFrom(cursor)
     if (!this.marker || this.marker.isDisposed || cursor < this.marker.line) return this.resetMarker()
     const from = Math.max(this.marker.line, cursor - MAX_SCAN_ROWS)
     if (cursor === from) return
@@ -76,6 +77,11 @@ export class TerminalHighlights {
       if (color) this.decorate(row, cursor, color, kind)
     }
     this.resetMarker()
+  }
+
+  private dropFrom(row: number): void {
+    for (const decoration of this.decorations) if (decoration.marker.line >= row) decoration.dispose()
+    this.decorations = this.decorations.filter((d) => !d.isDisposed)
   }
 
   private decorate(row: number, cursor: number, color: HighlightColor, kind: 'dark' | 'light'): void {

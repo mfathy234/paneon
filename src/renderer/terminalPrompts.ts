@@ -42,7 +42,7 @@ export class TerminalPrompts {
   }
 
   canJump(direction: 1 | -1): boolean {
-    return this.target(direction) !== null
+    return this.term.buffer.active.type === 'normal' && this.target(direction) !== null
   }
 
   jump(direction: 1 | -1): boolean {

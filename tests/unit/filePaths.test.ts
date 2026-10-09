@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findFilePaths, gotoTarget, isRunnableFile } from '../../src/shared/filePaths'
+import { findFilePaths, gotoTarget, isSafeToOpen } from '../../src/shared/filePaths'
 
 const paths = (text: string) => findFilePaths(text).map((m) => m.path)
 const only = (text: string) => {
@@ -94,11 +94,16 @@ describe('gotoTarget', () => {
   })
 })
 
-describe('isRunnableFile', () => {
-  it('flags files the system would execute', () => {
-    for (const name of ['a.exe', 'x\\run.BAT', 'b.cmd', 'c.ps1', 'd.lnk', 'e.msi', 'f.vbs', 'g.js', 'h.sh']) {
-      expect(isRunnableFile(name)).toBe(true)
+describe('isSafeToOpen', () => {
+  it('opens only known document and source types with the default app', () => {
+    for (const name of ['README.md', 'C:\work\acme-web\src\app.ts', 'logo.png', 'notes.txt', 'report.pdf']) {
+      expect(isSafeToOpen(name)).toBe(true)
     }
-    for (const name of ['a.ts', 'README.md', 'Makefile', 'x.json', 'a.exe.txt']) expect(isRunnableFile(name)).toBe(false)
+  })
+
+  it('never opens programs or scripts, including names with a trailing dot or space', () => {
+    for (const name of ['bin\evil.exe', 'bin\evil.exe.', 'run.bat ', 'tool.py', 'setup.js', 'Makefile', '.env.exe', 'x.ps1']) {
+      expect(isSafeToOpen(name)).toBe(false)
+    }
   })
 })

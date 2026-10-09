@@ -44,8 +44,10 @@ function consume(event: KeyboardEvent): void {
   event.stopPropagation()
 }
 
+const inFindBar = (event: KeyboardEvent): boolean => (event.target as HTMLElement | null)?.closest('.term-find') != null
+
 function onKeyDown(event: KeyboardEvent): void {
-  if (event.isComposing || overlayOpen()) return
+  if (event.isComposing || overlayOpen() || inFindBar(event)) return
   const state = store.state
   if (isPaletteShortcut(event, state)) {
     consume(event)

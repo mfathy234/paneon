@@ -33,6 +33,10 @@
 - **Cost and time at a glance.** Every pane shows how long its session has run and its tokens (and cost for Claude Code), and each project in the sidebar shows today's total.
 - **Export a transcript.** Save a session as Markdown or HTML with its prompts, replies, tool calls and the files it changed.
 - **Paste screenshots.** Ctrl+V with an image on the clipboard hands it to the agent in the focused tab.
+- **Commit and push from the pane.** Review a session's changed files with their diffs, then **Commit** the ones you check or **Commit and push** in one step, or discard them after a confirmation that names each file (Ctrl+Shift+G).
+- **Find in the terminal.** **Ctrl+Shift+F** searches a pane's output with match case, whole word and regex, and steps through the matches.
+- **Work with the output.** Ctrl+click a `file:line` path to open it in VS Code at that line, jump between your prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are still typing (**Ctrl+Alt+P**), save a selection as a snippet, and clear the scrollback.
+- **Highlight rules.** Lines with errors, warnings or passing tests are tinted in every pane; change the words and colors in Settings.
 - **Usage.** Tokens per day by agent, tokens and Claude Code cost by project and agent, and a history of your 5 hour and weekly limits, read from the agents' own folders.
 - **A `paneon` command.** Run `paneon .` in any folder to add it as a project and start its agent, `paneon resume --last` to pick up the newest session, `paneon open <layout>` to bring a saved layout back, or `paneon ls` to list your projects, all from the terminal you already have open.
 - **A short first run.** On a fresh install a two-step setup adds your first project and shows which agent CLIs are installed. It stays closed once you dismiss it and can be reopened from the Theme popover.
@@ -138,6 +142,12 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 | Ctrl+Shift+Alt+Home / End | Move the focused pane to the first / last position |
 | Ctrl+Shift+J | Go to the next pane that needs you (a permission prompt first, then a finished session) |
 | Ctrl+, | Open Settings |
+| Ctrl+Shift+F | Find in the focused terminal: Enter next, Shift+Enter previous, Esc closes |
+| Ctrl+Shift+G | Changes: review, commit, commit and push, or discard the pane's changed files |
+| Ctrl+Up / Ctrl+Down | Jump to your previous / next prompt in the focused terminal (passed to the agent when there is none) |
+| Ctrl+Alt+C | Copy the last reply |
+| Ctrl+Alt+P | Copy the prompt you are typing, without sending it |
+| Ctrl+click on a file path | Open it in VS Code at that line and column |
 | Ctrl+wheel, Ctrl+=, Ctrl+-, Ctrl+0 | Zoom the focused pane (10-28, default 15), remembered per project |
 | Ctrl+click on a link | Open it in the browser |
 | Ctrl+C with a selection, Ctrl+V | Copy and paste. With an image on the clipboard, Ctrl+V saves it as a PNG and pastes its path (as `@path` for Gemini CLI) |
@@ -205,13 +215,34 @@ The pane menu (the three dots) and the palette offer **Continue in Codex**, **Ge
 
 The strip under each agent pane's header shows how long the session has run and its tokens, read from the agents' own history files, plus the cost of Claude Code sessions, which comes from live session info (Settings > Notifications & session info). Codex CLI and Gemini CLI show tokens only. Each project in the sidebar shows today's total under its name, with a breakdown by agent on hover; it is hidden when the project has no usage today. The numbers refresh every minute and when a session finishes.
 
+### Changes: commit and push
+
+**Ctrl+Shift+G**, **Changes...** in a pane's ⋯ menu, or a click on the git changes in the strip under the header opens the pane folder's changed files: staged, unstaged and untracked, each with its status, +/- counts, a checkbox and **Show diff**. The header shows the branch, its upstream and how far ahead or behind it is. Write a message (the first line shows a 72 character hint) and press **Commit** to commit only the checked files, or **Commit and push** when the branch has an upstream. **Discard...** asks first and names the files on the message and the button; tracked files go back to the last commit and untracked files are deleted. Git's own message shows in the panel when a hook fails, the message is empty or the push is rejected. Hooks always run.
+
+### Finding text in a terminal
+
+**Ctrl+Shift+F** (or **Find in the terminal** in the palette) opens a find bar over the focused pane. It counts the matches ("2 of 3"), and has switches for match case, whole word and regular expressions. Enter or F3 goes to the next match, Shift+Enter to the previous one, and Esc closes the bar and returns to the terminal. Selected text fills the box when the bar opens.
+
+### Working with terminal output
+
+- **File paths** such as `src/invoices/totals.ts:42:7`, `src\app\main.ts(10,5)` or an absolute path become links when the file exists. Ctrl+click opens it in VS Code at that line and column, or with its default app when VS Code is not found. Programs and scripts are only shown in Explorer, never run.
+- **Prompts**: each prompt you send is marked. **Ctrl+Up** and **Ctrl+Down** scroll to the previous or next one; when there is none in that direction the keys go to the agent as usual.
+- **Copy last reply** (**Ctrl+Alt+C**, the ⋯ menu or the palette) copies everything after your last prompt, with wrapped lines joined.
+- **Copy current prompt** (**Ctrl+Alt+P**) copies what is in the agent's input box before you send it, read from the screen; when no input box is found it copies what you typed since your last Enter. Nothing is sent or cleared.
+- **Save selection as a snippet** opens the snippet dialog with the selected text.
+- **Clear scrollback** empties the pane's history without restarting the agent.
+
+### Highlight rules
+
+Lines that contain `error`, `failed`, `exception` (red), `warning` (amber) or `passed`, `✓`, `success` (green) get a tint and a bar on the left as output arrives. Settings > Highlights turns this off and edits the rules: a word or a regular expression and a color, up to 30 rules. **Reset to defaults** asks first and names the rules it replaces.
+
 ### Exporting a transcript
 
 **Export transcript...** in a pane's ⋯ menu or the palette saves the active tab's session. Pick Markdown or HTML in the save dialog. The file starts with the title, agent, model, project, folder, times and session id, then lists the prompts and replies in order, with each tool call on one line. If the folder is a git repository, a **Changes** section with `git diff --stat` follows. The HTML file is a single page that works offline. A tab without a session file exports the visible terminal text instead and says so.
 
 ### Settings
 
-Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Paneon keeps there). The Theme menu holds the themes and the background image.
+Open **Settings** in the top bar or press **Ctrl+,**. Its sections are **General** (the palette shortcut, the sidebar, Getting started), **Highlights**, **Notifications & session info**, **Agents** (full access per agent, the same switches as in the Agents view), **Updates** (version, automatic checks, Check now), **Changelog** (every release, newest first, also reachable from the What's new dialog) and **About** (links, the data folder and the files Paneon keeps there). The Theme menu holds the themes and the background image.
 
 ### Usage
 

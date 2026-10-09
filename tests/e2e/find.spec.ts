@@ -42,6 +42,16 @@ test('Ctrl+Shift+F finds text in the terminal, steps through matches and closes 
     await page.getByRole('option', { name: /^Find in the terminal/ }).click()
     await expect(bar).toBeVisible()
     await expect(input).toBeFocused()
+    await input.press('Escape')
+
+    await host.click()
+    await page.keyboard.press('Control+Enter')
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
+    await page.keyboard.press('Control+Shift+F')
+    await expect(input).toBeFocused()
+    await input.press('Escape')
+    await expect(bar).toBeHidden()
+    await expect(page.locator('.pane.maximized')).toHaveCount(1)
   } finally {
     await closeApp(app)
   }

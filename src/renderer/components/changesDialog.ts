@@ -161,7 +161,7 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
   }
 
   const refresh = async (): Promise<void> => {
-    const result = await api.gitStatus(options.folder)
+    const result = await api.gitStatus(options.folder).catch((error: Error) => ({ ok: false as const, error: error.message }))
     if (!result.ok) {
       showError(result.error)
       return
@@ -192,18 +192,23 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
       return
     }
     setBusy(true)
-    const paths = selected().map((file) => file.path)
-    const result = await api.gitCommit({ folder: options.folder, paths, message: area.value, push })
-    if (result.ok) {
-      area.value = ''
-      toast(`Committed ${result.hash}${result.pushed ? ' and pushed' : ''}`, 'info')
-    } else {
-      showError(result.error)
-      if (result.committed) area.value = ''
+    try {
+      const paths = selected().map((file) => file.path)
+      const result = await api.gitCommit({ folder: options.folder, paths, message: area.value, push })
+      if (result.ok) {
+        area.value = ''
+        toast(`Committed ${result.hash}${result.pushed ? ' and pushed' : ''}`, 'info')
+      } else {
+        showError(result.error)
+        if (result.committed) area.value = ''
+      }
+      await refresh()
+    } catch (error) {
+      showError(`Commit failed: ${(error as Error).message}`)
+    } finally {
+      setBusy(false)
+      options.onChanged()
     }
-    await refresh()
-    setBusy(false)
-    options.onChanged()
   }
 
   const runDiscard = async (): Promise<void> => {
@@ -214,12 +219,17 @@ export function openChangesDialog(options: ChangesOptions): Promise<void> {
     const confirmed = await confirmDialog({ title: message.title, body: message.body, confirmLabel: message.label })
     if (!confirmed) return
     setBusy(true)
-    const result = await api.gitDiscard({ folder: options.folder, paths })
-    if (result.ok) toast(paths.length === 1 ? `Discarded ${paths[0]}` : `Discarded ${paths.length} files`, 'info')
-    else showError(result.error)
-    await refresh()
-    setBusy(false)
-    options.onChanged()
+    try {
+      const result = await api.gitDiscard({ folder: options.folder, paths })
+      if (result.ok) toast(paths.length === 1 ? `Discarded ${paths[0]}` : `Discarded ${paths.length} files`, 'info')
+      else showError(result.error)
+      await refresh()
+    } catch (error) {
+      showError(`Discard failed: ${(error as Error).message}`)
+    } finally {
+      setBusy(false)
+      options.onChanged()
+    }
   }
 
   selectAll.addEventListener('change', () => {

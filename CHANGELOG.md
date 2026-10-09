@@ -3,6 +3,23 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Changes panel (**Ctrl+Shift+G**). Review a pane's changed files with their diffs, **Commit** only the files you check
+  or **Commit and push** in one step, and discard files after a confirmation that names them.
+- Find in the terminal (**Ctrl+Shift+F**) with match case, whole word and regex, a match count and next / previous.
+- Ctrl+click a `file:line` path in a terminal to open it in VS Code at that line.
+- **Ctrl+Up** / **Ctrl+Down** jump between the prompts you sent.
+- **Ctrl+Alt+C** copies the last reply and **Ctrl+Alt+P** copies the prompt you are typing, without sending it.
+- Save a terminal selection as a snippet, and clear a pane's scrollback without restarting the agent.
+- Highlight rules tint lines with errors, warnings or passing tests; edit them in Settings > Highlights.
+
+### Fixed
+
+- The Settings view and a few other parts of 0.7.0 showed without their styling.
+
 ## [0.7.0] - 2026-10-09
 
 ### Added

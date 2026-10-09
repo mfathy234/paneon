@@ -18,15 +18,17 @@ const URL_SPAN = /[A-Za-z][A-Za-z0-9+.-]*:\/\/\S+/g
 const EXTENSION = /\.[A-Za-z][A-Za-z0-9]{0,9}$/
 const TRAILING = /[.!…]+$/
 
-const RUNNABLE = new Set([
-  'exe', 'bat', 'cmd', 'com', 'ps1', 'psm1', 'lnk', 'msi', 'msp', 'vbs', 'vbe', 'js', 'jse', 'wsf', 'wsh',
-  'scr', 'pif', 'hta', 'jar', 'reg', 'cpl', 'msc', 'dll', 'sh', 'appref-ms', 'url', 'gadget'
+const SAFE_TO_OPEN = new Set([
+  'txt', 'md', 'markdown', 'json', 'jsonc', 'json5', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf', 'xml', 'csv', 'tsv',
+  'log', 'env', 'lock', 'diff', 'patch', 'ts', 'tsx', 'jsx', 'mts', 'cts', 'css', 'scss', 'sass', 'less', 'html', 'htm',
+  'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'pdf', 'rs', 'go', 'cs', 'csproj', 'sln', 'java', 'kt',
+  'swift', 'c', 'h', 'cc', 'cpp', 'hpp', 'sql', 'graphql', 'proto', 'vue', 'svelte', 'astro', 'razor', 'cshtml', 'gradle'
 ])
 
-export const isRunnableFile = (path: string): boolean => {
-  const name = path.split(/[\\/]/).pop() ?? ''
+export const isSafeToOpen = (path: string): boolean => {
+  const name = (path.split(/[\\/]/).pop() ?? '').replace(/[. ]+$/, '')
   const dot = name.lastIndexOf('.')
-  return dot < 0 ? false : RUNNABLE.has(name.slice(dot + 1).toLowerCase())
+  return dot > 0 && SAFE_TO_OPEN.has(name.slice(dot + 1).toLowerCase())
 }
 
 function urlSpans(text: string): [number, number][] {
