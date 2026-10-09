@@ -1,5 +1,6 @@
 import {
   openQuickPick,
+  openSettings,
   openResumePicker,
   showView,
   toggleLayouts,
@@ -64,6 +65,7 @@ export class TopBarComponent {
     'Layouts'
   )
   private readonly usage = h('button', { class: 'btn ghost', type: 'button', id: 'usage-button' }, 'Usage')
+  private readonly settings = h('button', { class: 'btn ghost', type: 'button', id: 'settings-button' }, 'Settings')
   private readonly count = h('span', { class: 'topbar-count', 'aria-live': 'polite' })
   readonly updatePill = h('button', {
     class: 'update-pill',
@@ -85,6 +87,10 @@ export class TopBarComponent {
     this.usage.addEventListener('click', () => {
       showView(this.usage.getAttribute('aria-pressed') === 'true' ? 'grid' : 'usage')
     })
+    this.settings.addEventListener('click', () => {
+      if (this.settings.getAttribute('aria-pressed') === 'true') showView('grid')
+      else openSettings()
+    })
     this.agents.addEventListener('click', () => {
       showView(this.agents.getAttribute('aria-pressed') === 'true' ? 'grid' : 'agents')
     })
@@ -104,6 +110,7 @@ export class TopBarComponent {
       this.limits,
       h('button', { class: 'btn ghost compact', type: 'button', 'aria-label': 'Decrease font size', onClick: () => zoomAll(-1) }, 'A−'),
       h('button', { class: 'btn ghost compact', type: 'button', 'aria-label': 'Increase font size', onClick: () => zoomAll(1) }, 'A+'),
+      this.settings,
       this.themeButton
     )
   }
@@ -114,6 +121,7 @@ export class TopBarComponent {
     this.projects.setAttribute('aria-pressed', String(state.view === 'projects'))
     this.agents.setAttribute('aria-pressed', String(state.view === 'agents'))
     this.usage.setAttribute('aria-pressed', String(state.view === 'usage'))
+    this.settings.setAttribute('aria-pressed', String(state.view === 'settings'))
     const updates = state.agents.report?.tools.some((tool) => toolState(tool) === 'update') === true
     this.agentsDot.hidden = !updates
     this.agents.setAttribute('aria-label', updates ? 'Agents, updates available' : 'Agents')

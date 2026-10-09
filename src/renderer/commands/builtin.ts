@@ -15,6 +15,7 @@ import {
   togglePinned,
   openWhatsNew,
   openOnboarding,
+  openSettings,
   runUpdateAction,
   showPaneDiff,
   showView,
@@ -172,6 +173,15 @@ export function installBuiltinCommands(): void {
     { id: 'view.projects', title: 'Open Projects', group: 'Actions', keywords: 'snippets folders', run: () => showView('projects') },
     { id: 'view.agents', title: 'Open Agents', group: 'Actions', keywords: 'install update cli', run: () => showView('agents') },
     { id: 'view.usage', title: 'Open Usage', group: 'Actions', keywords: 'tokens cost limits history', run: () => showView('usage') },
+    {
+      id: 'view.settings',
+      title: 'Open Settings',
+      group: 'Actions',
+      keywords: 'preferences options shortcut notifications updates changelog about',
+      shortcut: 'Ctrl+,',
+      keys: [{ key: ',', ctrl: true, shift: false, alt: false }],
+      run: () => openSettings()
+    },
     { id: 'view.grid', title: 'Back to the grid', group: 'Actions', searchOnly: true, run: () => showView('grid') },
     { id: 'app.theme', title: 'Choose a theme', group: 'Actions', keywords: 'colors background', run: () => toggleThemePicker(true) },
     { id: 'app.updates', title: 'Check for updates', group: 'Actions', run: () => runUpdateAction('check') },

@@ -1,10 +1,10 @@
-import { closeWhatsNew, openUpdateLink } from '../actions'
+import { closeWhatsNew, openUpdateLink, showFullChangelog } from '../actions'
 import { entryToMarkdown, type ChangelogEntry } from '../../shared/changelog'
 import { renderMarkdown } from '../../shared/markdown'
 import { h } from '../dom'
 import type { AppState, WhatsNewView } from '../state'
 
-function entryBlock(entry: ChangelogEntry): HTMLElement {
+export function entryBlock(entry: ChangelogEntry): HTMLElement {
   const body = h('div', { class: 'md' })
   body.innerHTML = renderMarkdown(entryToMarkdown(entry))
   return h(
@@ -65,7 +65,12 @@ export class WhatsNewComponent {
       h('h2', { id: 'wn-title' }, `What's new in Paneon ${this.view.version}`),
       this.view.from ? h('p', { class: 'wn-from' }, `Updated from ${this.view.from}`) : null,
       h('div', { class: 'wn-body' }, latest ? entryBlock(latest) : h('p', {}, 'No release notes for this version.'), olderBlock),
-      h('div', { class: 'dialog-actions' }, got)
+      h(
+        'div',
+        { class: 'dialog-actions' },
+        h('button', { class: 'btn ghost', type: 'button', id: 'wn-full', onClick: () => showFullChangelog() }, 'Full changelog'),
+        got
+      )
     )
     this.root.replaceChildren(dialog)
     if (showOlder) this.root.querySelector<HTMLElement>('#wn-older')?.scrollIntoView({ block: 'nearest' })
