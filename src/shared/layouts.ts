@@ -1,5 +1,6 @@
+import { sanitizeSplits } from './splits'
 import { LAYOUT_NAME_MAX, MAX_LAYOUTS } from './settingsSchema'
-import type { AgentKind, CompareLink, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
+import type { AgentKind, CompareLink, GridSplits, Project, SavedLayout, SavedPane, TabAgent, Workspace } from './types'
 
 export interface SnapshotTab {
   id: string
@@ -18,12 +19,14 @@ export interface SnapshotPane {
   compare?: CompareLink
   fontSize: number
   activeTabId: string
+  pinned?: boolean
   tabs: SnapshotTab[]
 }
 
 export interface SnapshotOptions {
   sessionFor?: (tab: SnapshotTab) => string | undefined
   portable?: boolean
+  splits?: GridSplits
 }
 
 export function snapshotWorkspace(
@@ -36,7 +39,7 @@ export function snapshotWorkspace(
     .map((pane) => ({ ...pane, tabs: pane.tabs.filter((tab) => tab.task === undefined) }))
     .filter((pane) => pane.tabs.length > 0)
   const focusedIndex = Math.max(0, kept.findIndex((pane) => pane.id === focusedId))
-  return {
+  const workspace: Workspace = {
     focusedIndex,
     panes: kept.map((pane): SavedPane => {
       const detached = options.portable === true && (pane.compare !== undefined || pane.folder !== undefined)
@@ -56,9 +59,13 @@ export function snapshotWorkspace(
         if (pane.folder) saved.folder = pane.folder
         if (pane.compare) saved.compare = pane.compare
       }
+      if (pane.pinned === true) saved.pinned = true
       return saved
     })
   }
+  const splits = sanitizeSplits(options.splits)
+  if (splits) workspace.splits = splits
+  return workspace
 }
 
 export const layoutSlug = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')

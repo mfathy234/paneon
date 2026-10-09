@@ -1,15 +1,18 @@
-import { focusPane, openQuickPick, showView } from '../actions'
+import { focusPane, openQuickPick, setSplits, showView } from '../actions'
 import { derivePanes, type PaneView } from '../derive'
 import { clear, h } from '../dom'
 import { pairOf } from '../../shared/compare'
 import { layoutForCount } from '../../shared/layout'
-import type { CompareLink } from '../../shared/types'
+import { resolveSplit, withSplit } from '../../shared/splits'
+import type { CompareLink, GridSplits } from '../../shared/types'
 import type { AppState } from '../state'
 import { getTerminal } from '../terminals'
 import { ComparePairComponent } from './comparePair'
+import { GridGutters } from './gutters'
 import { PaneComponent } from './pane'
 
 const MIN_ROW_HEIGHT = '340px'
+const PINNED_WIDTH = '32%'
 
 type Unit =
   | { kind: 'pane'; view: PaneView }
@@ -40,11 +43,19 @@ export class GridComponent {
   private readonly strip = h('div', { class: 'pane-strip', role: 'tablist', 'aria-label': 'Panes' })
   private readonly empty = h('div', { class: 'empty' })
   private readonly bg = h('div', { class: 'bg-layer', 'aria-hidden': 'true' })
+  private readonly gutters = new GridGutters((axis, sizes) => this.resize(axis, sizes))
+  private shape = { cols: 1, rows: 1 }
   private lastFocused: string | null = null
   private stripSignature = ''
+  private splits: GridSplits = {}
 
   constructor() {
-    this.el = h('div', { class: 'grid-area' }, this.bg, this.strip, this.grid, this.empty)
+    this.el = h('div', { class: 'grid-area' }, this.bg, this.strip, this.grid, this.gutters.el, this.empty)
+    new ResizeObserver(() => this.gutters.position()).observe(this.grid)
+  }
+
+  private resize(axis: 'cols' | 'rows', sizes: number[]): void {
+    setSplits(withSplit(this.splits, this.shape.cols, this.shape.rows, axis, sizes))
   }
 
   update(state: AppState): void {
@@ -53,6 +64,7 @@ export class GridComponent {
     this.syncPanes(views)
     const elements = this.syncUnits(units)
     const maximized = state.maximizedId !== null && views.some((v) => v.pane.id === state.maximizedId)
+    this.splits = state.splits
     this.layout(units, elements, views, maximized ? state.maximizedId : null)
     for (const view of views) {
       const isMax = maximized && view.pane.id === state.maximizedId
@@ -111,30 +123,26 @@ export class GridComponent {
     const style = this.grid.style
     this.grid.classList.toggle('maximized', maximizedId !== null)
     this.el.classList.toggle('focus-view', maximizedId !== null)
-    for (const view of views) {
-      const component = this.panes.get(view.pane.id)
-      if (component) component.el.hidden = maximizedId !== null && view.pane.id !== maximizedId
-    }
     if (maximizedId !== null) {
-      style.gridTemplateColumns = 'minmax(0, 1fr)'
-      style.gridTemplateRows = 'minmax(0, 1fr)'
-      this.grid.classList.remove('scrolls')
-      units.forEach((unit, index) => {
-        const contains = paneIds(unit).includes(maximizedId)
-        const element = elements[index]
-        element.hidden = !contains
-        element.classList.toggle('solo', contains && unit.kind === 'pair')
-        element.style.gridColumn = '1'
-        element.style.gridRow = '1'
-      })
+      this.layoutMaximized(units, elements, views, maximizedId)
       return
     }
+    for (const view of views) {
+      const component = this.panes.get(view.pane.id)
+      if (!component) continue
+      component.el.hidden = false
+      component.el.classList.remove('pinned-side')
+    }
+    this.grid.classList.remove('with-pinned')
     const layout = layoutForCount(units.length)
-    style.gridTemplateColumns = `repeat(${layout.cols}, minmax(0, 1fr))`
+    const split = resolveSplit(this.splits, layout.cols, layout.rows)
+    const track = (sizes: number[]): string => sizes.map((size) => `minmax(0, ${size}fr)`).join(' ')
+    style.gridTemplateColumns = layout.scrolls ? `repeat(${layout.cols}, minmax(0, 1fr))` : track(split.cols)
     style.gridTemplateRows = layout.scrolls
       ? `repeat(${layout.rows}, minmax(${MIN_ROW_HEIGHT}, 1fr))`
-      : `repeat(${layout.rows}, minmax(0, 1fr))`
+      : track(split.rows)
     this.grid.classList.toggle('scrolls', layout.scrolls)
+    const spanned = new Set<number>()
     elements.forEach((element, index) => {
       const cell = layout.cells[index]
       if (!cell) return
@@ -142,6 +150,53 @@ export class GridComponent {
       element.classList.remove('solo')
       element.style.gridColumn = `${cell.col} / span ${cell.colSpan}`
       element.style.gridRow = String(cell.row)
+      for (let boundary = cell.col; boundary < cell.col + cell.colSpan - 1; boundary += 1) spanned.add(boundary - 1)
+    })
+    this.shape = { cols: layout.cols, rows: layout.rows }
+    this.gutters.update({
+      grid: this.grid,
+      enabled: !layout.scrolls && units.length > 1,
+      cols: layout.cols,
+      rows: layout.rows,
+      sizes: split,
+      spanned
+    })
+  }
+
+  private layoutMaximized(units: Unit[], elements: HTMLElement[], views: PaneView[], maximizedId: string): void {
+    const style = this.grid.style
+    const pinnedId = views.find((view) => view.pane.pinned === true)?.pane.id
+    const sideIndex = pinnedId
+      ? units.findIndex((unit) => paneIds(unit).includes(pinnedId) && !paneIds(unit).includes(maximizedId))
+      : -1
+    const sideIds = sideIndex >= 0 ? paneIds(units[sideIndex]) : []
+    for (const view of views) {
+      const component = this.panes.get(view.pane.id)
+      if (!component) continue
+      const side = sideIds.includes(view.pane.id)
+      component.el.hidden = view.pane.id !== maximizedId && !side
+      component.el.classList.toggle('pinned-side', side)
+    }
+    this.grid.classList.toggle('with-pinned', sideIndex >= 0)
+    style.gridTemplateColumns = sideIndex >= 0 ? `minmax(0, 1fr) ${PINNED_WIDTH}` : 'minmax(0, 1fr)'
+    style.gridTemplateRows = 'minmax(0, 1fr)'
+    this.grid.classList.remove('scrolls')
+    units.forEach((unit, index) => {
+      const contains = paneIds(unit).includes(maximizedId)
+      const element = elements[index]
+      const side = index === sideIndex
+      element.hidden = !contains && !side
+      element.classList.toggle('solo', contains && unit.kind === 'pair')
+      element.style.gridColumn = side ? '2' : '1'
+      element.style.gridRow = '1'
+    })
+    this.gutters.update({
+      grid: this.grid,
+      enabled: false,
+      cols: 1,
+      rows: 1,
+      sizes: { cols: [1], rows: [1] },
+      spanned: new Set()
     })
   }
 

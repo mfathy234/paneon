@@ -73,7 +73,7 @@ async function boot(): Promise<void> {
     },
     onFocus: (termId) => {
       const paneId = paneOfTerm(termId)
-      if (paneId) focusPane(paneId)
+      if (paneId) focusPane(paneId, true)
     }
   })
   connectPtyStreams(handleTerminalExit)

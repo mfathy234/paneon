@@ -3284,3 +3284,76 @@ polyline.usage-line,
   font-size: 12px;
   line-height: 1.6;
 }
+
+.gutters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.gutter {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  border-radius: 3px;
+  outline: none;
+}
+
+.gutter-cols {
+  cursor: col-resize;
+}
+
+.gutter-rows {
+  cursor: row-resize;
+}
+
+.gutter::after {
+  content: '';
+  position: absolute;
+  background: var(--accent);
+  opacity: 0;
+}
+
+.gutter-cols::after {
+  inset: 0 5px;
+}
+
+.gutter-rows::after {
+  inset: 5px 0;
+}
+
+.gutter:hover::after,
+.gutter:focus-visible::after,
+.gutter.dragging::after {
+  opacity: 0.7;
+}
+
+.pane-pin {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+}
+
+.pane-header {
+  cursor: grab;
+}
+
+.pane.drag-source,
+.tab.drag-source {
+  opacity: 0.55;
+}
+
+.pane.drop-target {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.tab.drop-target {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+body.dragging-ui {
+  user-select: none;
+  cursor: grabbing;
+}

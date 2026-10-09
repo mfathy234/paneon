@@ -10,6 +10,7 @@ import {
   type ResumeSession,
   type SavedPane,
   type SessionInfoSettings,
+  type GridSplits,
   type StatusInfo,
   type Settings,
   type TabAgent
@@ -28,6 +29,7 @@ import {
 import { decideWhatsNew, effectiveLastSeen, entriesUpTo } from '../shared/changelog'
 import { showUpdatePill, type UpdateState } from '../shared/updates'
 import { snapshotWorkspace } from '../shared/layouts'
+import { moveById, moveItem } from '../shared/reorder'
 import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
 import type { OpsSnapshot } from '../shared/opsFeed'
@@ -98,7 +100,7 @@ export function saveSettings(patch: Partial<Settings>): Promise<void> {
 }
 
 function saveWorkspace(): Promise<void> {
-  return saveSettings({ workspace: snapshotWorkspace(store.state.panes, store.state.focusedId) })
+  return saveSettings({ workspace: snapshotWorkspace(store.state.panes, store.state.focusedId, { splits: store.state.splits }) })
 }
 
 export function persistWorkspace(): void {
@@ -338,14 +340,15 @@ export async function discardPane(paneId: string): Promise<void> {
   persistWorkspace()
 }
 
-export function focusPane(paneId: string): void {
+export function focusPane(paneId: string, keepMaximized = false): void {
   const state = store.state
-  if (state.focusedId === paneId && (state.maximizedId === null || state.maximizedId === paneId)) return
+  const stays = keepMaximized && state.maximizedId !== null
+  if (state.focusedId === paneId && (stays || state.maximizedId === null || state.maximizedId === paneId)) return
   store.set((s) => ({
     ...s,
     focusedId: paneId,
     view: 'grid',
-    maximizedId: s.maximizedId ? paneId : null,
+    maximizedId: stays ? s.maximizedId : s.maximizedId ? paneId : null,
     detailsPaneId: s.detailsPaneId === paneId ? paneId : null
   }))
   persistWorkspace()
@@ -375,10 +378,38 @@ export function movePane(paneId: string, toIndex: number): void {
   const from = panes.findIndex((p) => p.id === paneId)
   const to = Math.max(0, Math.min(panes.length - 1, toIndex))
   if (from < 0 || from === to) return
-  const next = [...panes]
-  const [moved] = next.splice(from, 1)
-  next.splice(to, 0, moved)
-  store.patch({ panes: next, focusedId: paneId })
+  store.patch({ panes: moveItem(panes, from, to), focusedId: paneId })
+  persistWorkspace()
+}
+
+export function moveTab(paneId: string, termId: string, toIndex: number): void {
+  const pane = paneById(store.state, paneId)
+  if (!pane) return
+  const tabs = moveById(pane.tabs, termId, toIndex)
+  if (tabs === pane.tabs) return
+  store.set((s) => mapPane(s, paneId, (p) => ({ ...p, tabs })))
+  persistWorkspace()
+}
+
+export function setPinned(paneId: string, pinned: boolean): void {
+  if (!paneById(store.state, paneId)) return
+  store.set((s) => ({
+    ...s,
+    panes: s.panes.map((p) => {
+      if (p.id === paneId) return { ...p, pinned: pinned ? true : undefined }
+      return pinned && p.pinned ? { ...p, pinned: undefined } : p
+    })
+  }))
+  persistWorkspace()
+}
+
+export function togglePinned(paneId?: string): void {
+  const target = paneById(store.state, paneId ?? store.state.focusedId)
+  if (target) setPinned(target.id, target.pinned !== true)
+}
+
+export function setSplits(splits: GridSplits): void {
+  store.patch({ splits })
   persistWorkspace()
 }
 
@@ -727,7 +758,8 @@ export function buildPane(saved: SavedPane, project: Project): PaneState {
     activeTabId: tabs[Math.min(saved.activeIndex, tabs.length - 1)].id,
     fontSize: clampFontSize(saved.fontSize),
     folder: saved.folder,
-    compare: saved.compare
+    compare: saved.compare,
+    pinned: saved.pinned === true ? true : undefined
   }
 }
 
@@ -740,7 +772,12 @@ export async function restoreWorkspace(): Promise<void> {
   }
   if (restored.length === 0) return
   const focused = restored[Math.min(settings.workspace.focusedIndex, restored.length - 1)]
-  store.patch({ panes: restored, focusedId: focused.id })
+  const pinned = restored.findIndex((pane) => pane.pinned === true)
+  store.patch({
+    panes: restored.map((pane, index) => (pane.pinned && index !== pinned ? { ...pane, pinned: undefined } : pane)),
+    focusedId: focused.id,
+    splits: settings.workspace.splits ?? {}
+  })
   void refreshBranches()
   void refreshGitChanges()
   await Promise.all(

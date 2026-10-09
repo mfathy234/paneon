@@ -53,7 +53,11 @@ function sessionResolver(): (tab: SnapshotTab) => string | undefined {
 
 export async function saveCurrentLayout(): Promise<SavedLayout | null> {
   const panes = savablePanes()
-  const workspace = snapshotWorkspace(panes, store.state.focusedId, { sessionFor: sessionResolver(), portable: true })
+  const workspace = snapshotWorkspace(panes, store.state.focusedId, {
+    sessionFor: sessionResolver(),
+    portable: true,
+    splits: store.state.splits
+  })
   if (workspace.panes.length === 0) {
     toast('Open a session first, then save the layout.', 'info')
     return null
@@ -71,7 +75,8 @@ export async function saveCurrentLayout(): Promise<SavedLayout | null> {
     name,
     createdAt: Date.now(),
     focusedIndex: workspace.focusedIndex,
-    panes: workspace.panes
+    panes: workspace.panes,
+    ...(workspace.splits ? { splits: workspace.splits } : {})
   }
   setLayouts([...store.state.settings.layouts, layout])
   return layout
@@ -140,11 +145,23 @@ export async function openLayout(layout: SavedLayout, mode?: OpenMode): Promise<
     if (!chosen) return { ok: false, text: `Did not open layout '${layout.name}'.`, cancelled: true }
   }
   if (chosen === 'replace') await Promise.all(store.state.panes.map((pane) => discardPane(pane.id)))
-  const panes = plan.openable.map(layoutPane).filter((pane): pane is PaneState => pane !== null)
+  const kept = chosen === 'replace' ? [] : store.state.panes
+  const holdsPin = kept.some((pane) => pane.pinned)
+  let pinTaken = holdsPin
+  const panes = plan.openable
+    .map(layoutPane)
+    .filter((pane): pane is PaneState => pane !== null)
+    .map((pane) => {
+      if (!pane.pinned) return pane
+      if (pinTaken) return { ...pane, pinned: undefined }
+      pinTaken = true
+      return pane
+    })
   const focused = panes[Math.min(plan.focusedIndex, panes.length - 1)]
   store.set((s) => ({
     ...s,
     panes: [...s.panes, ...panes],
+    splits: layout.splits ? { ...s.splits, ...layout.splits } : s.splits,
     focusedId: focused.id,
     maximizedId: null,
     detailsPaneId: null,

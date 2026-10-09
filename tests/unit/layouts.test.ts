@@ -61,6 +61,24 @@ describe('snapshotWorkspace', () => {
     expect(result.panes[1].tabs[0]).toMatchObject({ agent: 'codex', agentsOpen: true })
   })
 
+  it('saves the pinned flag, the splits and the reordered tab order with the active tab', () => {
+    const reordered = [
+      { ...panes[0], pinned: true, tabs: [panes[0].tabs[1], panes[0].tabs[0]] },
+      panes[1]
+    ]
+    const result = snapshotWorkspace(reordered, 'p1', { splits: { '2x1': { cols: [1, 3], rows: [1] } } })
+    expect(result.panes[0].pinned).toBe(true)
+    expect(result.panes[1].pinned).toBeUndefined()
+    expect(result.panes[0].tabs.map((tab) => tab.agent)).toEqual(['shell', 'claude'])
+    expect(result.panes[0].activeIndex).toBe(0)
+    expect(result.splits).toEqual({ '2x1': { cols: [0.25, 0.75], rows: [1] } })
+  })
+
+  it('leaves splits out when none are stored', () => {
+    expect(snapshotWorkspace(panes, null).splits).toBeUndefined()
+    expect(snapshotWorkspace(panes, null, { splits: {} }).splits).toBeUndefined()
+  })
+
   it('lets the caller supply session ids such as ones matched from the agent folders', () => {
     const result = snapshotWorkspace(panes, null, { sessionFor: (tab) => tab.sessionId ?? `matched-${tab.id}` })
     expect(result.panes[1].tabs[0].sessionId).toBe('matched-t4')

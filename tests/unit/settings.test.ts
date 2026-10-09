@@ -166,3 +166,50 @@ describe('sessionInfo settings', () => {
     expect(migrateSettings({ sessionInfo: { notifications: 'yes' } }).sessionInfo.notifications).toBe(true)
   })
 })
+
+describe('migrateSettings splits and pinned', () => {
+  const base = {
+    projects: [{ id: 'a', name: 'acme-web', folder: 'C:\Work\acme-web' }],
+    workspace: { focusedIndex: 0, panes: [] as unknown[] }
+  }
+  const pane = (extra: Record<string, unknown> = {}) => ({
+    projectId: 'a',
+    activeIndex: 0,
+    fontSize: 14,
+    tabs: [{ agent: 'shell', label: 'shell' }],
+    ...extra
+  })
+
+  it('accepts old files without splits or pins', () => {
+    const result = migrateSettings({ ...base, workspace: { focusedIndex: 0, panes: [pane()] } })
+    expect(result.workspace.splits).toBeUndefined()
+    expect(result.workspace.panes[0].pinned).toBeUndefined()
+  })
+
+  it('keeps valid splits and drops bad split data', () => {
+    const good = migrateSettings({ ...base, workspace: { ...base.workspace, splits: { '2x2': { cols: [1, 3], rows: [1, 1] } } } })
+    expect(good.workspace.splits).toEqual({ '2x2': { cols: [0.25, 0.75], rows: [0.5, 0.5] } })
+    const bad = migrateSettings({ ...base, workspace: { ...base.workspace, splits: { x: 1, '2x2': { cols: 'no' } } } })
+    expect(bad.workspace.splits).toBeUndefined()
+    expect(migrateSettings({ ...base, workspace: { ...base.workspace, splits: [] } }).workspace.splits).toBeUndefined()
+  })
+
+  it('keeps only the first pinned pane in the workspace', () => {
+    const result = migrateSettings({
+      ...base,
+      workspace: { focusedIndex: 0, panes: [pane({ pinned: true }), pane({ pinned: true }), pane({ pinned: 'yes' })] }
+    })
+    expect(result.workspace.panes.map((p) => p.pinned)).toEqual([true, undefined, undefined])
+  })
+
+  it('carries splits and pins through saved layouts', () => {
+    const result = migrateSettings({
+      ...base,
+      layouts: [
+        { id: 'l1', name: 'Morning', createdAt: 1, focusedIndex: 0, panes: [pane({ pinned: true })], splits: { '1x1': { cols: [1], rows: [1] }, '2x1': { cols: [1, 3], rows: [2] } } }
+      ]
+    })
+    expect(result.layouts[0].panes[0].pinned).toBe(true)
+    expect(result.layouts[0].splits).toEqual({ '2x1': { cols: [0.25, 0.75], rows: [1] } })
+  })
+})
