@@ -17,6 +17,7 @@ import { notifyUser, quickOpen } from './desktop'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges } from './git'
 import { checkAgentTools } from './agentTools'
+import { readClipboardContent } from './clipboardImage'
 import { bridgeDirs, claudeSettingsPath } from './paths'
 import { listAllSessions } from './sessionIndex'
 import { listClaudeSessions, listCodexSessions, listGeminiSessions } from './projectSessions'
@@ -122,7 +123,7 @@ export function registerIpc(
   ipcMain.handle(IPC.compareCreate, (_event, folder: string, short: string) => createWorktrees(folder, short))
   ipcMain.handle(IPC.compareStatus, (_event, repo: string, path: string, branch: string) => worktreeStatus(repo, path, branch))
   ipcMain.handle(IPC.compareRemove, (_event, request: WorktreeRemoval) => removeWorktree(request))
-  ipcMain.handle(IPC.clipboardRead, () => clipboard.readText())
+  ipcMain.handle(IPC.clipboardRead, () => readClipboardContent())
   ipcMain.handle(IPC.clipboardWrite, (_event, text: string) => clipboard.writeText(String(text)))
   ipcMain.handle(IPC.openExternal, async (_event, url: string) => {
     if (isSafeUrl(url)) await shell.openExternal(url)

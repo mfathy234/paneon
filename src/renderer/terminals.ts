@@ -1,4 +1,6 @@
+import type { TabAgent } from '../shared/types'
 import { api } from './api'
+import { pasteText } from '../shared/clipboard'
 import { noteOutput } from './ptyActivity'
 import { mapTerm, store } from './state'
 import { currentBundle } from './themeManager'
@@ -22,6 +24,14 @@ function clearResumeChip(id: string): void {
   if (pending) store.set((s) => mapTerm(s, id, (t) => ({ ...t, resumeChipAt: undefined })))
 }
 
+function tabAgent(id: string): TabAgent | undefined {
+  for (const pane of store.state.panes) {
+    const tab = pane.tabs.find((t) => t.id === id)
+    if (tab) return tab.agent
+  }
+  return undefined
+}
+
 export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const existing = views.get(id)
   if (existing) return existing
@@ -33,7 +43,7 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     onResize: (cols, rows) => api.resize(id, cols, rows),
     onZoom: (direction) => events.onZoom(id, direction),
     onFocus: () => events.onFocus(id),
-    readClipboard: () => api.readClipboard(),
+    readClipboard: async () => pasteText(await api.readClipboard(), tabAgent(id)),
     writeClipboard: (text) => api.writeClipboard(text),
     openLink: (url) => void api.openExternal(url)
   })

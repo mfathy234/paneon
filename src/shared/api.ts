@@ -1,3 +1,4 @@
+import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
 import type { WorktreeStatus } from './compare'
@@ -66,7 +67,7 @@ export interface GridApi {
   kill(id: string): Promise<void>
   onData(listener: (id: string, data: string) => void): () => void
   onExit(listener: (id: string, exitCode: number) => void): () => void
-  readClipboard(): Promise<string>
+  readClipboard(): Promise<ClipboardContent>
   writeClipboard(text: string): Promise<void>
   openExternal(url: string): Promise<void>
   appInfo(): Promise<AppInfo>
