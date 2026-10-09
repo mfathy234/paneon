@@ -85,6 +85,10 @@ section { padding: 88px 0; }
 .mark.claude { color: var(--accent); border: 1px solid var(--accent); }
 .mark.codex { background: var(--codex); }
 .mark.gemini { background: var(--gemini); }
+.mark.brand { background: transparent; border: none; }
+.mark.brand svg { fill: currentColor; }
+.mark.brand.claude { color: #d97757; }
+.mark.brand.gemini { color: #8e75b2; }
 
 .showcase { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px 28px; margin-top: 48px; }
 .showcase figcaption, .feature-shot figcaption { margin-top: 14px; color: var(--muted); font-size: 0.95rem; }
