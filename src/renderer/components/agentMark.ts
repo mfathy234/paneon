@@ -3,9 +3,11 @@ import type { AgentKind, TabAgent } from '../../shared/types'
 import { h } from '../dom'
 import claudeLogo from '../assets/brand/claude.svg?raw'
 import geminiLogo from '../assets/brand/googlegemini.svg?raw'
+import openaiLogo from '../assets/brand/openai.svg?raw'
 
 const BRAND_LOGOS: Partial<Record<AgentKind, string>> = {
   claude: claudeLogo.replace(/<title>[^<]*<\/title>/, ''),
+  codex: openaiLogo.replace(/<title>[^<]*<\/title>/, ''),
   gemini: geminiLogo.replace(/<title>[^<]*<\/title>/, '')
 }
 

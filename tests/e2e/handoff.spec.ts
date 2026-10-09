@@ -86,7 +86,7 @@ test('continues a session in another agent with an editable summary and a from c
     await feedTerminal(page, sourceId, '\x1b[31mError: timeout waiting for #dashboard\x1b[0m\r\n')
 
     await page.getByRole('button', { name: 'Pane actions' }).click()
-    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['XContinue in Codex', 'Continue in Gemini'])
+    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['Continue in Codex', 'Continue in Gemini'])
     await page.getByRole('menuitem', { name: 'Continue in Codex' }).click()
     const dialog = page.getByRole('dialog', { name: 'Continue in Codex' })
     await expect(dialog).toBeVisible()

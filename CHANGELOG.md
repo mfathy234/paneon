@@ -13,7 +13,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Claude and Gemini sessions show their own logos instead of letter badges.
+- Claude, Codex and Gemini sessions show their own logos instead of letter badges.
 
 ### Fixed
 

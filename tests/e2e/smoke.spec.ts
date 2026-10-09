@@ -225,7 +225,7 @@ test('reorders panes from the move menu and the keyboard, and opens pane menus n
   }
 })
 
-test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex tabs', async () => {
+test('starts Codex from the quick-pick with Tab, shows the OpenAI mark and adds Codex tabs', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -235,12 +235,12 @@ test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex 
     await page.keyboard.type('smo')
     await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Claude')
     await page.keyboard.press('Tab')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
     await page.keyboard.press('Enter')
 
     await expect(page.locator('.pane')).toHaveCount(1)
     await expect(page.locator('.quickpick')).toHaveCount(0)
-    await expect(page.locator('.pane-header .agent-mark.codex')).toHaveText('X')
+    await expect(page.locator('.pane-header .agent-mark.codex svg')).toHaveCount(1)
     await expect(page.locator('.tabs .agent-mark.codex')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['codex'])
     const codexId = await activeTermId(page)
@@ -257,7 +257,7 @@ test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex 
     await page.screenshot({ path: join(SCREENS, '10-codex-tabs.png') })
 
     await page.keyboard.press('Control+Shift+N')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
     await page.keyboard.press('Escape')
     await expect(page.locator('.quickpick')).toHaveCount(0)
   } finally {
@@ -265,7 +265,7 @@ test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex 
   }
 })
 
-test('cycles Claude, Codex, Gemini with Tab, marks Gemini with G and stores a session id per tab', async () => {
+test('cycles Claude, Codex, Gemini with Tab, shows the Gemini mark and stores a session id per tab', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
   try {
@@ -274,7 +274,7 @@ test('cycles Claude, Codex, Gemini with Tab, marks Gemini with G and stores a se
     const agent = page.locator('.quickpick .option.selected .option-agent')
     await expect(agent).toHaveText('Claude')
     await page.keyboard.press('Tab')
-    await expect(agent).toHaveText('XCodex')
+    await expect(agent).toHaveText('Codex')
     await page.keyboard.press('Tab')
     await expect(agent).toHaveText('Gemini')
     await page.keyboard.press('Tab')
@@ -302,7 +302,7 @@ test('cycles Claude, Codex, Gemini with Tab, marks Gemini with G and stores a se
     expect(new Set(ids).size).toBe(2)
 
     await page.keyboard.press('Control+Shift+N')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
     await page.keyboard.press('Escape')
   } finally {
     await closeBounded(app)
@@ -351,7 +351,7 @@ test('names and status of a Codex pane come from Codex rollout files', async () 
   const { app, page } = await launchApp(sandbox)
   try {
     await page.keyboard.press('Control+Shift+N')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Codex')
     await page.keyboard.type('smo')
     await page.keyboard.press('Enter')
     await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)

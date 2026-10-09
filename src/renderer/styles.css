@@ -1191,6 +1191,10 @@ input[type='checkbox'] {
   color: #d97757;
 }
 
+.agent-mark.brand.codex {
+  color: var(--text);
+}
+
 .agent-mark.brand.gemini {
   color: #8e75b2;
 }
