@@ -5,7 +5,7 @@ import { IPC } from '../shared/ipc'
 import { safeLink } from '../shared/markdown'
 import type { NotifyRequest, QuickOpenKind } from '../shared/types'
 
-function logTo(file: string, line: string): void {
+export function logTo(file: string, line: string): void {
   try {
     appendFileSync(file, `${line}\n`, 'utf8')
   } catch {

@@ -5,6 +5,8 @@ import { Terminal } from '@xterm/xterm'
 import { insertionData } from '../shared/snippets'
 import { h } from './dom'
 import { TerminalPrompts } from './terminalPrompts'
+import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
+import { registerFileLinks, type FileLinkHost } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 
@@ -21,6 +23,8 @@ export interface TerminalCallbacks {
   readClipboard(): Promise<string>
   writeClipboard(text: string): Promise<void>
   openLink(url: string): void
+  fileLinks: FileLinkHost
+  highlights: HighlightHost
 }
 
 export class TerminalView {
@@ -30,6 +34,7 @@ export class TerminalView {
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
   readonly prompts: TerminalPrompts
+  private readonly highlights: TerminalHighlights
   private opened = false
   private frame = 0
 
@@ -53,6 +58,8 @@ export class TerminalView {
     })
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
+    registerFileLinks(this.term, callbacks.fileLinks)
+    this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.prompts = new TerminalPrompts(this.term)
     this.term.onData((data) => {
       this.prompts.noteInput(data)
@@ -65,6 +72,10 @@ export class TerminalView {
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el)
     this.applyBundle(bundle)
+  }
+
+  refreshHighlights(): void {
+    this.highlights.refresh()
   }
 
   openSearch(): void {
@@ -201,6 +212,7 @@ export class TerminalView {
     this.observer.disconnect()
     this.search.dispose()
     this.prompts.dispose()
+    this.highlights.dispose()
     this.term.dispose()
     this.el.remove()
   }

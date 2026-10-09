@@ -1,0 +1,102 @@
+import type { IDecoration, IDisposable, IMarker, Terminal } from '@xterm/xterm'
+import {
+  compileRules,
+  highlightBackground,
+  highlightTint,
+  type CompiledRules,
+  type HighlightColor,
+  type HighlightRule,
+  type HighlightSettings
+} from '../shared/highlights'
+
+export const MAX_DECORATIONS = 500
+const MAX_SCAN_ROWS = 5000
+
+export interface HighlightHost {
+  config(): { settings: HighlightSettings; kind: 'dark' | 'light' }
+}
+
+export class TerminalHighlights {
+  private decorations: IDecoration[] = []
+  private marker: IMarker | null = null
+  private compiled: { rules: HighlightRule[]; value: CompiledRules } | null = null
+  private readonly subscription: IDisposable
+
+  constructor(
+    private readonly term: Terminal,
+    private readonly host: HighlightHost
+  ) {
+    this.resetMarker()
+    this.subscription = term.onWriteParsed(() => this.scan())
+  }
+
+  refresh(): void {
+    if (!this.host.config().settings.enabled) this.clear()
+    this.resetMarker()
+  }
+
+  dispose(): void {
+    this.subscription.dispose()
+    this.clear()
+  }
+
+  private clear(): void {
+    for (const decoration of this.decorations) decoration.dispose()
+    this.decorations = []
+    this.dropMarker()
+  }
+
+  private dropMarker(): void {
+    this.marker?.dispose()
+    this.marker = null
+  }
+
+  private resetMarker(): void {
+    this.marker?.dispose()
+    this.marker = this.term.registerMarker(0) ?? null
+  }
+
+  private rules(settings: HighlightSettings): CompiledRules {
+    if (this.compiled?.rules !== settings.rules) this.compiled = { rules: settings.rules, value: compileRules(settings.rules) }
+    return this.compiled.value
+  }
+
+  private scan(): void {
+    const { settings, kind } = this.host.config()
+    const buffer = this.term.buffer.active
+    if (buffer.type !== 'normal') return this.dropMarker()
+    if (!settings.enabled || settings.rules.length === 0) return this.resetMarker()
+    const cursor = buffer.baseY + buffer.cursorY
+    if (!this.marker || this.marker.isDisposed || cursor < this.marker.line) return this.resetMarker()
+    const from = Math.max(this.marker.line, cursor - MAX_SCAN_ROWS)
+    if (cursor === from) return
+    const rules = this.rules(settings)
+    for (let row = from; row < cursor; row += 1) {
+      const color = rules.test(buffer.getLine(row)?.translateToString(true) ?? '')
+      if (color) this.decorate(row, cursor, color, kind)
+    }
+    this.resetMarker()
+  }
+
+  private decorate(row: number, cursor: number, color: HighlightColor, kind: 'dark' | 'light'): void {
+    this.decorations = this.decorations.filter((d) => !d.isDisposed)
+    if (this.decorations.some((d) => d.marker.line === row)) return
+    const marker = this.term.registerMarker(row - cursor)
+    if (!marker) return
+    const decoration = this.term.registerDecoration({ marker, x: 0, width: this.term.cols, height: 1, layer: 'bottom' })
+    if (!decoration) {
+      marker.dispose()
+      return
+    }
+    decoration.onRender((element) => {
+      element.classList.add('term-hl')
+      element.dataset.hl = color
+      element.style.width = '100%'
+      element.style.pointerEvents = 'none'
+      element.style.background = highlightBackground(color, kind)
+      element.style.boxShadow = `inset 3px 0 0 ${highlightTint(color)}`
+    })
+    this.decorations.push(decoration)
+    while (this.decorations.length > MAX_DECORATIONS) this.decorations.shift()?.dispose()
+  }
+}

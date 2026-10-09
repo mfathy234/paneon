@@ -34,6 +34,7 @@ import { CHANGELOG_ENTRIES } from './changelog'
 import { forgetOutput } from './ptyActivity'
 import type { OpsSnapshot } from '../shared/opsFeed'
 import type { AgentPreset } from '../shared/quickPick'
+import { defaultHighlightRules, describeRules, sameRules, type HighlightSettings } from '../shared/highlights'
 import { api } from './api'
 import { openChangesDialog } from './components/changesDialog'
 import { confirmDialog } from './components/dialogs'
@@ -558,6 +559,25 @@ export function openSettings(section?: AppState['settingsSection']): void {
 
 export function showSettingsSection(settingsSection: AppState['settingsSection']): void {
   store.patch({ settingsSection })
+}
+
+export function setHighlights(highlights: HighlightSettings): void {
+  store.set((s) => ({ ...s, settings: { ...s.settings, highlights } }))
+  void saveSettings({ highlights })
+}
+
+export async function resetHighlightRules(): Promise<void> {
+  const current = store.state.settings.highlights
+  const defaults = defaultHighlightRules()
+  if (sameRules(current.rules, defaults)) return
+  const count = current.rules.length
+  const names = count === 0 ? 'your empty rule list' : `your ${count} rule${count === 1 ? '' : 's'} (${describeRules(current.rules, 12)})`
+  const confirmed = await confirmDialog({
+    title: 'Reset highlight rules?',
+    body: `This replaces ${names} with the ${defaults.length} default rules.`,
+    confirmLabel: `Replace ${count} rule${count === 1 ? '' : 's'}`
+  })
+  if (confirmed) setHighlights({ ...current, rules: defaults })
 }
 
 export function setPaletteShortcut(paletteShortcut: string): void {

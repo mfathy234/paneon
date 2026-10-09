@@ -1,3 +1,4 @@
+import type { HighlightSettings } from './highlights'
 export type AgentKind = 'claude' | 'codex' | 'gemini'
 export type TabAgent = AgentKind | 'shell'
 export type SessionStatus = 'busy' | 'idle'
@@ -107,6 +108,7 @@ export interface Settings {
   autoUpdateCheck: boolean
   paletteShortcut: string
   fullAccess: FullAccess
+  highlights: HighlightSettings
 }
 
 export type FullAccess = Record<AgentKind, boolean>

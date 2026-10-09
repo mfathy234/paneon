@@ -1,6 +1,7 @@
 import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
+import type { FileRef } from './filePaths'
 import type { WorktreeStatus } from './compare'
 import type { CommitRequest, DiscardRequest, GitCommitResult, GitDiffResult, RepoStatusResult } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
@@ -63,6 +64,8 @@ export interface GridApi {
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>
+  existingFiles(folder: string, candidates: string[]): Promise<(string | null)[]>
+  openFile(folder: string, ref: FileRef): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string) => void): () => void
   bridgePreview(): Promise<BridgePreview>

@@ -14,6 +14,8 @@ import type {
 import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { notifyUser, quickOpen } from './desktop'
+import { existingFiles, openFile } from './fileOpen'
+import type { FileRef } from '../shared/filePaths'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges } from './git'
 import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
@@ -97,6 +99,8 @@ export function registerIpc(
   )
   ipcMain.handle(IPC.resumeAll, (_event, query: ResumeQuery) => listAllSessions(settings.get().projects, query ?? {}))
   ipcMain.handle(IPC.quickOpen, (_event, kind: QuickOpenKind, folder: string) => quickOpen(kind, folder))
+  ipcMain.handle(IPC.filesExist, (_event, folder: string, candidates: string[]) => existingFiles(folder, candidates))
+  ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow(), request))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))
