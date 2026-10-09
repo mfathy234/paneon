@@ -4,6 +4,7 @@ import { AGENTS, AGENT_NAMES, agentOf } from '../../shared/agents'
 import type { AgentKind, Project } from '../../shared/types'
 import { clear, h } from '../dom'
 import type { AppState, ProjectsTab } from '../state'
+import { InstructionsPanelComponent } from './instructionsPanel'
 import { SnippetsPanelComponent } from './snippetsPanel'
 
 export class ProjectsViewComponent {
@@ -16,6 +17,7 @@ export class ProjectsViewComponent {
   private current: AppState | null = null
 
   private readonly snippets = new SnippetsPanelComponent()
+  private readonly instructions = new InstructionsPanelComponent()
   private readonly tabs = new Map<ProjectsTab, HTMLElement>()
   private readonly projectsPanel = h('div', { class: 'proj-panel', role: 'tabpanel', id: 'panel-projects' })
 
@@ -40,7 +42,9 @@ export class ProjectsViewComponent {
     )
     this.snippets.el.setAttribute('role', 'tabpanel')
     this.snippets.el.id = 'panel-snippets'
-    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.snippets.el)
+    this.instructions.el.setAttribute('role', 'tabpanel')
+    this.instructions.el.id = 'panel-instructions'
+    this.el.append(h('h1', {}, 'Projects'), this.tabBar(), this.projectsPanel, this.snippets.el, this.instructions.el)
   }
 
   private tabBar(): HTMLElement {
@@ -60,7 +64,10 @@ export class ProjectsViewComponent {
       this.tabs.set(value, button)
       return button
     }
-    return h('div', { class: 'rp-tabs proj-tabs', role: 'tablist', 'aria-label': 'Projects view' }, tab('projects', 'Projects'), tab('snippets', 'Snippets'))
+    return h('div', { class: 'rp-tabs proj-tabs', role: 'tablist', 'aria-label': 'Projects view' }, tab('projects', 'Projects'),
+      tab('snippets', 'Snippets'),
+      tab('instructions', 'Instructions')
+    )
   }
 
   private updateTabs(state: AppState): void {
@@ -72,12 +79,14 @@ export class ProjectsViewComponent {
     }
     this.projectsPanel.hidden = state.projectsTab !== 'projects'
     this.snippets.el.hidden = state.projectsTab !== 'snippets'
+    this.instructions.el.hidden = state.projectsTab !== 'instructions'
   }
 
   update(state: AppState): void {
     this.current = state
     this.updateTabs(state)
     this.snippets.update(state)
+    this.instructions.update(state)
     this.updateCounts(state)
     const signature = JSON.stringify(state.settings.projects.map((p) => [p.id, p.name, p.folder, p.defaultAgent]))
     if (signature === this.signature) return

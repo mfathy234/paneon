@@ -3806,3 +3806,145 @@ body.dragging-ui {
 .menu-item[disabled] .menu-icon {
   opacity: 0.5;
 }
+
+.instr-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
+.instr-project {
+  width: 260px;
+}
+
+.instr-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.instr-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.instr-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.instr-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.instr-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.instr-editor[hidden],
+.instr-conflict[hidden] {
+  display: none;
+}
+
+.instr-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.instr-spacer {
+  flex: 1;
+}
+
+.instr-dirty {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.instr-dirty.on {
+  color: var(--accent);
+}
+
+.instr-text {
+  height: auto;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.instr-area {
+  min-height: 280px;
+}
+
+.instr-conflict {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.instr-conflict span {
+  flex: 1;
+}
+
+.instr-shared {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.instr-h {
+  margin: 0;
+  font-size: 15px;
+}
+
+.instr-creates {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.instr-create {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.instr-create[hidden] {
+  display: none;
+}
+
+.instr-preview {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.instr-preview li {
+  padding: 2px 0;
+}
+
+.instr-error {
+  color: var(--danger);
+}

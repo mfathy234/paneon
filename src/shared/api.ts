@@ -2,6 +2,7 @@ import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
 import type { FileRef } from './filePaths'
+import type { InstructionRead, InstructionWriteRequest, InstructionWriteResult } from './instructions'
 import type { WorktreeStatus } from './compare'
 import type { CommitRequest, DiscardRequest, GitCommitResult, GitDiffResult, RepoStatusResult } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
@@ -67,6 +68,9 @@ export interface GridApi {
   findSolution(folder: string): Promise<string | null>
   existingFiles(folder: string, candidates: string[]): Promise<(string | null)[]>
   openFile(folder: string, ref: FileRef): Promise<void>
+  readInstruction(folder: string, name: string): Promise<InstructionRead>
+  writeInstruction(request: InstructionWriteRequest): Promise<InstructionWriteResult>
+  openInstruction(folder: string, name: string): Promise<void>
   notify(request: NotifyRequest): void
   onNotifyClick(listener: (paneId: string) => void): () => void
   bridgePreview(): Promise<BridgePreview>

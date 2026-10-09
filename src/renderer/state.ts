@@ -57,7 +57,7 @@ export type View = 'grid' | 'projects' | 'agents' | 'usage' | 'settings'
 
 export type SettingsSection = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about'
 
-export type ProjectsTab = 'projects' | 'snippets'
+export type ProjectsTab = 'projects' | 'snippets' | 'instructions'
 
 export interface AgentsState {
   report: AgentsReport | null
@@ -89,6 +89,7 @@ export interface AppState {
   view: View
   settingsSection: SettingsSection
   projectsTab: ProjectsTab
+  instructionsProject: string | null
   sessions: SessionFile[]
   codexSessions: CodexSession[]
   geminiSessions: GeminiSession[]
@@ -130,6 +131,7 @@ export const initialState = (): AppState => ({
   view: 'grid',
   settingsSection: 'general',
   projectsTab: 'projects',
+  instructionsProject: null,
   sessions: [],
   codexSessions: [],
   geminiSessions: [],

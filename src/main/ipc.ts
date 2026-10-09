@@ -15,6 +15,8 @@ import { readCodexSessions } from './codexWatcher'
 import { readGeminiSessions } from './geminiWatcher'
 import { findSolution, notifyUser, quickOpen } from './desktop'
 import { existingFiles, openFile } from './fileOpen'
+import { projectFolder, readInstruction, writeInstruction } from './instructionFiles'
+import { isInstructionName, type InstructionWriteRequest } from '../shared/instructions'
 import type { FileRef } from '../shared/filePaths'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges } from './git'
@@ -102,6 +104,16 @@ export function registerIpc(
   ipcMain.handle(IPC.findSolution, (_event, folder: string) => (typeof folder === 'string' ? findSolution(folder) : null))
   ipcMain.handle(IPC.filesExist, (_event, folder: string, candidates: string[]) => existingFiles(folder, candidates))
   ipcMain.handle(IPC.filesOpen, (_event, folder: string, ref: FileRef) => openFile(folder, ref))
+  ipcMain.handle(IPC.instructionsRead, (_event, folder: unknown, name: unknown) =>
+    readInstruction(settings.get().projects, folder, name)
+  )
+  ipcMain.handle(IPC.instructionsWrite, (_event, request: InstructionWriteRequest) =>
+    writeInstruction(settings.get().projects, request)
+  )
+  ipcMain.handle(IPC.instructionsOpen, (_event, folder: unknown, name: unknown) => {
+    const root = projectFolder(settings.get().projects, folder)
+    return root && isInstructionName(name) ? openFile(root, { path: name }) : undefined
+  })
   ipcMain.on(IPC.notify, (_event, request: NotifyRequest) => notifyUser(getWindow(), request))
   ipcMain.handle(IPC.bridgePreview, () => bridgePreview(locations()))
   ipcMain.handle(IPC.bridgeStatus, () => bridgeStatus(locations()))

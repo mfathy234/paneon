@@ -30,6 +30,7 @@ import {
 } from '../actions'
 import { derivePanes } from '../derive'
 import { saveSelectionAsSnippet } from '../snippetActions'
+import { openInstructionsForPane } from '../instructionsActions'
 import {
   canJumpPrompt,
   clearScrollback,
@@ -211,6 +212,7 @@ export function installBuiltinCommands(): void {
       enabled: (state) => hasPane(state) && focusedHasSelection()
     },
     focusedAction('terminal.clear-scrollback', 'Clear the terminal scrollback', clearScrollback, 'history wipe screen output'),
+    focusedAction('pane.instructions', 'Edit project instructions', openInstructionsForPane, 'claude agents gemini md rules'),
     focusedAction('pane.vscode', 'Open in VS Code', (id) => openPaneFolder(id, 'vscode'), 'editor folder'),
     focusedAction('pane.explorer', 'Open in Explorer', (id) => openPaneFolder(id, 'explorer'), 'folder files'),
     focusedAction('pane.terminal', 'Open a terminal here', (id) => addTab(id, 'shell'), 'shell tab'),
