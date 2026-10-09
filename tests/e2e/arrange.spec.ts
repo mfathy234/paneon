@@ -52,8 +52,8 @@ test('resizes columns with a draggable gutter, keeps the size, and resets on dou
     const equalWidth = await widthOf(panes.first())
 
     const start = await center(gutter)
-    await drag(page, start, { x: start.x + 180, y: start.y })
-    await expect.poll(async () => widthOf(panes.first())).toBeGreaterThan(equalWidth + 120)
+    await drag(page, start, { x: start.x + 80, y: start.y })
+    await expect.poll(async () => widthOf(panes.first())).toBeGreaterThan(equalWidth + 50)
     await expect(gutter).not.toHaveAttribute('aria-valuenow', '50')
     await expect
       .poll(() => readSettings(sandbox.userData).workspace?.splits?.['2x1']?.cols?.[0] ?? 0)
