@@ -2,6 +2,7 @@ import { isAgent } from './agents'
 import { DEFAULT_THEME_ID } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
+import { sanitizeSplits } from './splits'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -146,11 +147,22 @@ function sanitizePane(item: unknown): SavedPane | null {
   if (folder) pane.folder = folder
   const compare = sanitizeCompare(item.compare)
   if (compare) pane.compare = compare
+  if (item.pinned === true) pane.pinned = true
   return pane
 }
 
+function singlePin(panes: SavedPane[]): SavedPane[] {
+  const first = panes.findIndex((pane) => pane.pinned === true)
+  return panes.map((pane, index) => {
+    if (pane.pinned !== true || index === first) return pane
+    const { pinned: _pinned, ...rest } = pane
+    return rest
+  })
+}
+
 function sanitizePanes(value: unknown): SavedPane[] {
-  return (Array.isArray(value) ? value : []).map(sanitizePane).filter((pane): pane is SavedPane => pane !== null)
+  const panes = (Array.isArray(value) ? value : []).map(sanitizePane).filter((pane): pane is SavedPane => pane !== null)
+  return singlePin(panes)
 }
 
 function focusedIn(value: unknown, count: number): number {
@@ -159,8 +171,11 @@ function focusedIn(value: unknown, count: number): number {
 
 function sanitizeWorkspace(value: unknown, projectIds: Set<string>): Workspace {
   if (!isRecord(value) || !Array.isArray(value.panes)) return { panes: [], focusedIndex: 0 }
-  const panes = sanitizePanes(value.panes).filter((pane) => projectIds.has(pane.projectId))
-  return { panes, focusedIndex: focusedIn(value.focusedIndex, panes.length) }
+  const panes = singlePin(sanitizePanes(value.panes).filter((pane) => projectIds.has(pane.projectId)))
+  const workspace: Workspace = { panes, focusedIndex: focusedIn(value.focusedIndex, panes.length) }
+  const splits = sanitizeSplits(value.splits)
+  if (splits) workspace.splits = splits
+  return workspace
 }
 
 export const MAX_LAYOUTS = 50
@@ -179,7 +194,10 @@ function sanitizeLayouts(value: unknown): SavedLayout[] {
     if (seen.has(id)) id = makeId()
     seen.add(id)
     const createdAt = typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) ? item.createdAt : 0
-    layouts.push({ id, name, createdAt, focusedIndex: focusedIn(item.focusedIndex, panes.length), panes })
+    const layout: SavedLayout = { id, name, createdAt, focusedIndex: focusedIn(item.focusedIndex, panes.length), panes }
+    const splits = sanitizeSplits(item.splits)
+    if (splits) layout.splits = splits
+    layouts.push(layout)
   }
   return layouts.slice(0, MAX_LAYOUTS)
 }

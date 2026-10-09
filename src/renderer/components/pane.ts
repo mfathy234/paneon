@@ -6,10 +6,12 @@ import {
   focusPane,
   focusRelative,
   movePane,
+  moveTab,
   openDetails,
   openPaneFolder,
   restartTab,
   setActiveTab,
+  togglePinned,
   showPaneDiff,
   toggleAgents,
   toggleDetails,
@@ -27,6 +29,7 @@ import { paneInfoStrip } from './paneInfo'
 import { ICONS } from '../icons'
 import { agentMark } from './agentMark'
 import { ensureTerminal } from '../terminals'
+import { enableDrag } from '../drag'
 
 const RESUMED_CHIP_MS = 60_000
 
@@ -34,6 +37,7 @@ export class PaneComponent {
   readonly el: HTMLElement
   private readonly mark = h('span', { class: 'slot' })
   private readonly index = h('span', { class: 'pane-title' })
+  private readonly pin = h('span', { class: 'pane-pin', title: 'Pinned pane', role: 'img', 'aria-label': 'Pinned pane', hidden: true })
   private readonly fresh = h('span', { class: 'pane-fresh' }, 'new session')
   private readonly resumed = h('span', { class: 'chip chip-resumed', hidden: true }, 'resumed')
   private readonly compareChip = h('span', { class: 'chip chip-compare', hidden: true })
@@ -59,10 +63,12 @@ export class PaneComponent {
 
   constructor(readonly paneId: string) {
     this.branch.append(icon(ICONS.branch), this.branchName)
+    this.pin.append(icon(ICONS.pin))
     const header = h(
       'div',
       { class: 'pane-header' },
       this.mark,
+      this.pin,
       this.index,
       this.fresh,
       this.resumed,
@@ -84,6 +90,15 @@ export class PaneComponent {
       if ((event.target as HTMLElement).closest('button')) return
       toggleMaximize(paneId)
     })
+    enableDrag<HTMLElement>(header, {
+      ignore: 'button, input, a',
+      targetAt: (x, y) => this.paneTargetAt(x, y),
+      mark: (target) => this.markDrop(target),
+      drop: (target) => {
+        const index = store.state.panes.findIndex((p) => p.id === target.dataset.paneId)
+        if (index >= 0) movePane(paneId, index)
+      }
+    })
     this.restart.addEventListener('click', () => {
       const view = this.current
       if (view) void restartTab(paneId, view.tabs.find((t) => t.active)?.id ?? view.pane.activeTabId)
@@ -95,7 +110,7 @@ export class PaneComponent {
     const work = h('div', { class: 'pane-work' }, this.tabs, this.body)
     const content = h('div', { class: 'pane-content' }, work, this.details)
     this.el = h('section', { class: 'pane', 'data-pane-id': paneId }, header, this.info, this.drawer.el, content)
-    this.el.addEventListener('pointerdown', () => focusPane(paneId), true)
+    this.el.addEventListener('pointerdown', () => focusPane(paneId, true), true)
   }
 
   update(view: PaneView, focused: boolean, maximized: boolean): void {
@@ -116,6 +131,8 @@ export class PaneComponent {
     this.el.setAttribute('aria-label', `Task ${view.index + 1} ${title.toUpperCase()}${maximized ? ', maximized' : ''}`)
     this.el.classList.toggle('focused', focused)
     this.el.classList.toggle('maximized', maximized)
+    this.pin.hidden = view.pane.pinned !== true
+    this.el.classList.toggle('pinned', view.pane.pinned === true)
     this.branch.hidden = !view.branch
     this.branchName.textContent = view.branch ?? ''
     this.statusWord.textContent = view.status
@@ -216,6 +233,8 @@ export class PaneComponent {
       h('button', { class: 'menu-item', type: 'button', role: 'menuitem', onClick: () => run(action) }, text)
     const first = item('Open in VS Code', () => openPaneFolder(this.paneId, 'vscode'))
     const showDetails = item('Details', () => openDetails(this.paneId))
+    const pinned = this.current?.pane.pinned === true
+    const pinItem = item(pinned ? 'Unpin pane' : 'Pin pane', () => togglePinned(this.paneId))
     const source = this.current?.agent ?? 'shell'
     const handoffs =
       source === 'shell'
@@ -233,6 +252,7 @@ export class PaneComponent {
       item('Open terminal here', () => addTab(this.paneId, 'shell')),
       item('Show diff', () => showPaneDiff(this.paneId)),
       showDetails,
+      pinItem,
       ...handoffs
     )
     this.actionsMenu.addEventListener('keydown', (event) => {
@@ -263,6 +283,27 @@ export class PaneComponent {
     document.removeEventListener('keydown', this.escapeActions, true)
     this.actionsMenu?.remove()
     this.actionsMenu = null
+  }
+
+  private paneTargetAt(x: number, y: number): HTMLElement | null {
+    if (document.querySelector('.grid.maximized')) return null
+    const hit = document.elementFromPoint(x, y)?.closest<HTMLElement>('.pane[data-pane-id]')
+    return hit && hit !== this.el ? hit : null
+  }
+
+  private markDrop(target: HTMLElement | null): void {
+    for (const marked of document.querySelectorAll('.pane.drop-target')) marked.classList.remove('drop-target')
+    target?.classList.add('drop-target')
+  }
+
+  private tabTargetAt(x: number, y: number, termId: string): HTMLElement | null {
+    const hit = document.elementFromPoint(x, y)?.closest<HTMLElement>('.tab[data-tab-id]')
+    return hit && hit.parentElement === this.tabs && hit.dataset.tabId !== termId ? hit : null
+  }
+
+  private markTabDrop(target: HTMLElement | null): void {
+    for (const marked of this.tabs.querySelectorAll('.tab.drop-target')) marked.classList.remove('drop-target')
+    target?.classList.add('drop-target')
   }
 
   private markAgent = ''
@@ -316,7 +357,21 @@ export class PaneComponent {
       tab.label
     )
     label.title = `${sessionLabel(tab.agent)}: ${tab.label}`
-    const wrapper = h('div', { class: `tab${tab.active ? ' active' : ''}${tab.exited ? ' exited' : ''}` }, agentMark(tab.agent), label)
+    const wrapper = h(
+      'div',
+      { class: `tab${tab.active ? ' active' : ''}${tab.exited ? ' exited' : ''}`, 'data-tab-id': tab.id },
+      agentMark(tab.agent),
+      label
+    )
+    enableDrag<HTMLElement>(wrapper, {
+      ignore: '.tab-close',
+      targetAt: (x, y) => this.tabTargetAt(x, y, tab.id),
+      mark: (target) => this.markTabDrop(target),
+      drop: (target) => {
+        const index = view.tabs.findIndex((t) => t.id === target.dataset.tabId)
+        if (index >= 0) moveTab(this.paneId, tab.id, index)
+      }
+    })
     if (tab.active) {
       wrapper.append(
         iconButton(`Close terminal ${tab.label}`, ICONS.closeSmall, () => void closeTerminal(this.paneId, tab.id), 'tab-close')

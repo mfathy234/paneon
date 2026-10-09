@@ -55,11 +55,20 @@ export interface SavedPane {
   tabs: SavedTab[]
   activeIndex: number
   fontSize: number
+  pinned?: boolean
 }
+
+export interface GridSplit {
+  cols: number[]
+  rows: number[]
+}
+
+export type GridSplits = Record<string, GridSplit>
 
 export interface Workspace {
   panes: SavedPane[]
   focusedIndex: number
+  splits?: GridSplits
 }
 
 export interface SavedLayout {
@@ -68,6 +77,7 @@ export interface SavedLayout {
   createdAt: number
   focusedIndex: number
   panes: SavedPane[]
+  splits?: GridSplits
 }
 
 export interface Snippet {

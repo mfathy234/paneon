@@ -12,6 +12,7 @@ import {
   openPaneFolder,
   openQuickPick,
   openResumePicker,
+  togglePinned,
   openWhatsNew,
   openOnboarding,
   runUpdateAction,
@@ -108,6 +109,15 @@ export function installBuiltinCommands(): void {
       enabled: (state) => state.panes.length > i,
       run: () => focusPaneAt(i)
     })),
+    {
+      id: 'pane.pin',
+      title: 'Pin or unpin the pane',
+      group: 'Actions',
+      keywords: 'keep visible side column sticky',
+      scope: 'grid',
+      enabled: hasPane,
+      run: () => togglePinned()
+    },
     {
       id: 'pane.move-earlier',
       title: 'Move the pane earlier',

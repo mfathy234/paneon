@@ -12,6 +12,7 @@ import type {
   CodexSession,
   GeminiSession,
   GitChanges,
+  GridSplits,
   Project,
   SessionFile,
   Settings,
@@ -46,6 +47,7 @@ export interface PaneState {
   fontSize: number
   folder?: string
   compare?: CompareLink
+  pinned?: boolean
 }
 
 export type QuickPickMode = 'new' | 'resume'
@@ -80,6 +82,7 @@ export interface AppState {
   panes: PaneState[]
   focusedId: string | null
   maximizedId: string | null
+  splits: GridSplits
   view: View
   projectsTab: ProjectsTab
   sessions: SessionFile[]
@@ -118,6 +121,7 @@ export const initialState = (): AppState => ({
   panes: [],
   focusedId: null,
   maximizedId: null,
+  splits: {},
   view: 'grid',
   projectsTab: 'projects',
   sessions: [],
