@@ -34,6 +34,10 @@
 - **Export a transcript.** Save a session as Markdown or HTML with its prompts, replies, tool calls and the files it changed.
 - **Paste screenshots.** Ctrl+V with an image on the clipboard hands it to the agent in the focused tab.
 - **Commit and push from the pane.** Review a session's changed files with their diffs, then **Commit** the ones you check or **Commit and push** in one step, or discard them after a confirmation that names each file (Ctrl+Shift+G).
+- **Git at hand.** Pull, fetch, switch or create a branch, stash and apply a stash from the palette or by clicking the branch in a pane header, which also shows how far ahead or behind it is.
+- **Project instructions.** Edit a project's `CLAUDE.md`, `AGENTS.md` and `GEMINI.md` in the Projects view, and keep one shared block of instructions in sync across all three.
+- **Context warnings.** The context gauge turns amber at 80% and red at 90%, and a full session offers **Compact** before it runs out.
+- **Drop files into a terminal.** Drag files from Explorer onto a pane to type their paths for the agent.
 - **Find in the terminal.** **Ctrl+Shift+F** searches a pane's output with match case, whole word and regex, and steps through the matches.
 - **Work with the output.** Ctrl+click a `file:line` path to open it in VS Code at that line, jump between your prompts with **Ctrl+Up** and **Ctrl+Down**, copy the last reply (**Ctrl+Alt+C**) or the prompt you are still typing (**Ctrl+Alt+P**), save a selection as a snippet, and clear the scrollback.
 - **Highlight rules.** Lines with errors, warnings or passing tests are tinted in every pane; change the words and colors in Settings.
@@ -219,6 +223,28 @@ The strip under each agent pane's header shows how long the session has run and 
 ### Changes: commit and push
 
 **Ctrl+Shift+G**, **Changes...** in a pane's ⋯ menu, or a click on the git changes in the strip under the header opens the pane folder's changed files: staged, unstaged and untracked, each with its status, +/- counts, a checkbox and **Show diff**. The header shows the branch, its upstream and how far ahead or behind it is. Write a message (the first line shows a 72 character hint) and press **Commit** to commit only the checked files, or **Commit and push** when the branch has an upstream. **Discard...** asks first and names the files on the message and the button; tracked files go back to the last commit and untracked files are deleted. Git's own message shows in the panel when a hook fails, the message is empty or the push is rejected. Hooks always run.
+
+### Git quick actions
+
+Click the branch in a pane header, or search the palette, for **Pull**, **Fetch**, **Switch branch...**, **Stash changes** and **Apply last stash**. They act on the pane folder. The branch shows `↑2 ↓1` when it has an upstream that is ahead or behind.
+
+- **Pull** only fast-forwards. When the branches have diverged it shows git's message and changes nothing.
+- **Switch branch...** lists local branches, newest first, then remote branches (picking one creates a tracking branch). Type a new name to create a branch from the current one; invalid names are refused with the reason. When uncommitted changes block the switch, **Stash and switch** stashes them first and **Apply last stash** brings them back.
+- **Apply last stash** keeps the stash when applying it conflicts.
+
+### Project instructions
+
+Projects > **Instructions** lists a project's `CLAUDE.md` (Claude Code), `AGENTS.md` (Codex CLI) and `GEMINI.md` (Gemini CLI) with their size and last change. **Edit** opens a file in an editor with Save (Ctrl+S) and Revert; line endings are kept. When the file changed on disk since you opened it, Save stops and offers Reload, or Overwrite after a confirmation that names the file.
+
+**Shared instructions** are written once and kept between `<!-- paneon:shared:start -->` and `<!-- paneon:shared:end -->` in every file that exists; tick a missing file to create it. A preview lists what will change before **Apply to all files**. Text outside the markers is never touched. **Edit project instructions** in the palette opens the tab for the focused pane's project.
+
+### Context warnings
+
+When a session reports its context use (Claude Code with live session info, Codex CLI from its own files), the gauge in the strip turns amber at 80% and red at 90%. At 90% a line under the header offers **Compact**, which types `/compact` for you to send, and **Dismiss**, which hides it until 95%. A notification arrives once per session when it crosses 90% and the window is not in front.
+
+### Dropping files into a terminal
+
+Drag files or folders from Explorer onto a pane: their paths are typed into the tab under the drop, separated by spaces, quoted when they contain spaces and as `@path` for Gemini CLI. Nothing is sent until you press Enter. Up to 20 files per drop.
 
 ### Finding text in a terminal
 

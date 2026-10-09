@@ -3,6 +3,17 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Git quick actions: Pull (fast-forward only), Fetch, Switch branch with create and remote branches, Stash and switch,
+  Stash changes and Apply last stash, from the palette or the branch in a pane header, which now shows ahead / behind.
+- Projects > Instructions edits `CLAUDE.md`, `AGENTS.md` and `GEMINI.md`, refuses to save over outside changes
+  without asking, and keeps a shared block of instructions in sync across the three files.
+- Context warnings: the gauge turns amber at 80% and red at 90%, with a Compact hint and a one-time notification.
+- Drag files from Explorer onto a pane to type their paths into the agent.
+
 ## [0.8.0] - 2026-10-09
 
 ### Added

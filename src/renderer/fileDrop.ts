@@ -1,4 +1,5 @@
-import { dropPasteText, DROP_FILE_LIMIT, pathsFromUriList } from '../shared/clipboard'
+import { dropPasteText, DROP_FILE_LIMIT, pathsFromUriList, shellKindOf } from '../shared/clipboard'
+import { store } from './state'
 import type { TabAgent } from '../shared/types'
 import { api } from './api'
 import { getTerminal } from './terminals'
@@ -12,7 +13,7 @@ function droppedPaths(transfer: DataTransfer): string[] {
 }
 
 export function dropFiles(transfer: DataTransfer, tabId: string, agent: TabAgent | undefined): void {
-  const text = dropPasteText(agent, droppedPaths(transfer))
+  const text = dropPasteText(agent, droppedPaths(transfer), shellKindOf(store.state.info.shellCommand))
   if (text === '') return
   const view = getTerminal(tabId)
   if (!view) return

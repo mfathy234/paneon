@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -85,5 +85,35 @@ describe('writeInstruction', () => {
   it('keeps CRLF bytes exactly as given', () => {
     writeInstruction(projects(), request({ content: 'a\r\nb\r\n' }))
     expect(readFileSync(join(folder, 'CLAUDE.md'), 'utf8')).toBe('a\r\nb\r\n')
+  })
+})
+
+describe('instruction files that are links', () => {
+  const canLink = (target: string, path: string): boolean => {
+    try {
+      symlinkSync(target, path, 'file')
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  it('writes through a link to a file inside the project and keeps the link', (context) => {
+    writeFileSync(join(folder, 'AGENTS.md'), 'shared')
+    if (!canLink(join(folder, 'AGENTS.md'), join(folder, 'CLAUDE.md'))) return context.skip()
+    expect(readInstruction(projects(), folder, 'CLAUDE.md')).toMatchObject({ ok: true, exists: true, content: 'shared' })
+    expect(writeInstruction(projects(), { folder, name: 'CLAUDE.md', content: 'updated', expected: null, overwrite: true } as any).ok).toBe(true)
+    expect(lstatSync(join(folder, 'CLAUDE.md')).isSymbolicLink()).toBe(true)
+    expect(readFileSync(join(folder, 'AGENTS.md'), 'utf8')).toBe('updated')
+  })
+
+  it('refuses links that point outside the project or to nothing', (context) => {
+    writeFileSync(join(root, 'outside.md'), 'x')
+    if (!canLink(join(root, 'outside.md'), join(folder, 'CLAUDE.md'))) return context.skip()
+    expect(readInstruction(projects(), folder, 'CLAUDE.md').ok).toBe(false)
+    expect(writeInstruction(projects(), { folder, name: 'CLAUDE.md', content: 'y', expected: null, overwrite: true } as any).ok).toBe(false)
+    expect(readFileSync(join(root, 'outside.md'), 'utf8')).toBe('x')
+    canLink(join(folder, 'missing.md'), join(folder, 'GEMINI.md'))
+    expect(readInstruction(projects(), folder, 'GEMINI.md').ok).toBe(false)
   })
 })

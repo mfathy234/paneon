@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, lstatSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import {
   INSTRUCTION_MAX_BYTES,
   isInstructionName,
@@ -28,10 +28,36 @@ function stampOf(path: string): (FileStamp & { isFile: boolean }) | null {
   }
 }
 
+type Target = { ok: true; path: string } | { ok: false; message: string }
+
+function targetOf(root: string, name: string): Target {
+  const path = join(root, name)
+  let link = false
+  try {
+    link = lstatSync(path).isSymbolicLink()
+  } catch {
+    return { ok: true, path }
+  }
+  if (!link) return { ok: true, path }
+  let real: string
+  try {
+    real = realpathSync(path)
+  } catch {
+    return { ok: false, message: `${name} is a link to a file that does not exist.` }
+  }
+  const inside = relative(realpathSync(root), real)
+  if (inside === '' || inside.startsWith('..') || isAbsolute(inside)) {
+    return { ok: false, message: `${name} links to a file outside the project, so Paneon leaves it alone.` }
+  }
+  return { ok: true, path: real }
+}
+
 export function readInstruction(projects: Project[], folder: unknown, name: unknown): InstructionRead {
   const root = projectFolder(projects, folder)
   if (!root || !isInstructionName(name)) return { ok: false, message: 'That file is not part of a Paneon project.' }
-  const path = join(root, name)
+  const target = targetOf(root, name)
+  if (!target.ok) return { ok: false, message: target.message }
+  const path = target.path
   const stamp = stampOf(path)
   if (!stamp) return { ok: true, exists: false, content: '', size: 0, mtimeMs: 0 }
   if (!stamp.isFile) return { ok: false, message: `${name} is not a regular file.` }
@@ -66,13 +92,15 @@ export function writeInstruction(projects: Project[], request: InstructionWriteR
   if (Buffer.byteLength(content, 'utf8') > INSTRUCTION_MAX_BYTES) {
     return failure('toolarge', `${name} would be larger than ${INSTRUCTION_MAX_BYTES / 1024} KB.`)
   }
-  const path = join(root, name)
+  const target = targetOf(root, name)
+  if (!target.ok) return failure('invalid', target.message)
+  const path = target.path
   const current = stampOf(path)
   if (current && !current.isFile) return failure('invalid', `${name} is not a regular file.`)
   if (!request.overwrite && changedOnDisk(path, request.expected ?? null)) {
     return failure('changed', `${name} changed on disk since you opened it.`)
   }
-  const temp = join(root, `.${name}.paneon-${randomBytes(4).toString('hex')}.tmp`)
+  const temp = join(dirname(path), `.${basename(path)}.paneon-${randomBytes(4).toString('hex')}.tmp`)
   try {
     writeFileSync(temp, content, 'utf8')
     renameSync(temp, path)

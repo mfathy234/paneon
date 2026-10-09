@@ -16,14 +16,12 @@ import {
   type SwitchMode
 } from '../shared/gitBranches'
 import { forgetChanges, gitSync } from './git'
-import { git, repoRoot } from './gitCommit'
+import { REPO_BUSY, git, repoRoot, tryLockRepo, unlockRepo } from './gitCommit'
 
 const QUICK_MS = 15_000
 const SLOW_MS = 180_000
 const NOT_A_REPO = 'This folder is not a git repository.'
-const BUSY = 'Another git operation is still running in this folder.'
 
-const busy = new Set<string>()
 
 function fail(error: string, canStash?: boolean): GitQuickResult {
   const text = trimGitMessage(error) || 'Git failed without a message.'
@@ -105,7 +103,14 @@ async function switchBranch(root: string, request: Extract<GitQuickRequest, { op
   }
   const switched = await git(root, args, SLOW_MS)
   if (!switched.ok) {
-    if (stashed) await git(root, ['stash', 'pop'], QUICK_MS, false)
+    if (stashed) {
+      const restored = await git(root, ['stash', 'pop'], QUICK_MS, false)
+      if (!restored.ok) {
+        return fail(`${switched.message}
+
+Your changes are still in the stash: run "Apply last stash" after fixing the problem.`)
+      }
+    }
     return fail(switched.message, !request.stash && isDirtyRefusal(switched.message))
   }
   const target = request.mode === 'remote' ? request.branch.slice(request.branch.indexOf('/') + 1) : request.branch
@@ -134,12 +139,11 @@ async function dispatch(root: string, request: GitQuickRequest): Promise<GitQuic
 export async function runGitQuick(request: GitQuickRequest): Promise<GitQuickResult> {
   const root = await repoRoot(request?.folder)
   if (!root) return fail(NOT_A_REPO)
-  if (busy.has(root)) return fail(BUSY)
-  busy.add(root)
+  if (!tryLockRepo(root)) return fail(REPO_BUSY)
   try {
     return await dispatch(root, request)
   } finally {
-    busy.delete(root)
+    unlockRepo(root)
     forgetChanges()
   }
 }

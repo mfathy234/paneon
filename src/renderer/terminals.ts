@@ -1,6 +1,6 @@
 import type { TabAgent } from '../shared/types'
 import { api } from './api'
-import { pasteText } from '../shared/clipboard'
+import { pasteText, shellKindOf } from '../shared/clipboard'
 import { noteOutput } from './ptyActivity'
 import { mapTerm, store } from './state'
 import { currentBundle } from './themeManager'
@@ -50,7 +50,7 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     onResize: (cols, rows) => api.resize(id, cols, rows),
     onZoom: (direction) => events.onZoom(id, direction),
     onFocus: () => events.onFocus(id),
-    readClipboard: async () => pasteText(await api.readClipboard(), tabAgent(id)),
+    readClipboard: async () => pasteText(await api.readClipboard(), tabAgent(id), shellKindOf(store.state.info.shellCommand)),
     writeClipboard: (text) => api.writeClipboard(text),
     openLink: (url) => void api.openExternal(url),
     fileLinks: fileLinkHost(id),

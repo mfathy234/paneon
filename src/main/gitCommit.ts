@@ -49,6 +49,31 @@ export function git(root: string, args: string[], timeout = QUICK_MS, literalPat
   })
 }
 
+const locked = new Set<string>()
+
+export const REPO_BUSY = 'Another git operation is still running in this folder.'
+
+export function tryLockRepo(root: string): boolean {
+  if (locked.has(root)) return false
+  locked.add(root)
+  return true
+}
+
+export function unlockRepo(root: string): void {
+  locked.delete(root)
+}
+
+async function whileLocked<T extends { ok: boolean }>(folder: unknown, run: () => Promise<T>): Promise<T | { ok: false; error: string }> {
+  const root = await repoRoot(folder)
+  if (!root) return run()
+  if (!tryLockRepo(root)) return { ok: false, error: REPO_BUSY }
+  try {
+    return await run()
+  } finally {
+    unlockRepo(root)
+  }
+}
+
 export async function repoRoot(folder: unknown): Promise<string | null> {
   if (typeof folder !== 'string' || folder === '') return null
   const result = await git(folder, ['rev-parse', '--show-toplevel'])
@@ -99,7 +124,10 @@ function failure(error: string, committed?: string): GitCommitResult {
   return committed ? { ok: false, error, committed } : { ok: false, error }
 }
 
-export async function commitFiles(request: CommitRequest): Promise<GitCommitResult> {
+export const commitFiles = (request: CommitRequest): Promise<GitCommitResult> =>
+  whileLocked(request?.folder, () => commitNow(request)) as Promise<GitCommitResult>
+
+async function commitNow(request: CommitRequest): Promise<GitCommitResult> {
   const checked = validateRepoPaths(request?.paths)
   if (!checked.ok) return failure(checked.error)
   const message = typeof request.message === 'string' ? request.message.trim() : ''
@@ -123,7 +151,9 @@ export async function commitFiles(request: CommitRequest): Promise<GitCommitResu
   return pushed.ok ? { ok: true, hash, pushed: true } : failure(`Committed ${hash}, but the push failed.\n${pushed.message}`, hash)
 }
 
-export async function pushBranch(folder: unknown): Promise<GitResult> {
+export const pushBranch = (folder: unknown): Promise<GitResult> => whileLocked(folder, () => pushNow(folder))
+
+async function pushNow(folder: unknown): Promise<GitResult> {
   const root = await repoRoot(folder)
   if (!root) return { ok: false, error: 'This folder is not a git repository.' }
   const pushed = await git(root, ['push'], SLOW_MS)
@@ -136,7 +166,9 @@ function insideRoot(root: string, path: string): string | null {
   return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? null : full
 }
 
-export async function discardFiles(request: DiscardRequest): Promise<GitResult> {
+export const discardFiles = (request: DiscardRequest): Promise<GitResult> => whileLocked(request?.folder, () => discardNow(request))
+
+async function discardNow(request: DiscardRequest): Promise<GitResult> {
   const checked = validateRepoPaths(request?.paths)
   if (!checked.ok) return { ok: false, error: checked.error }
   const current = await repoStatus(request.folder)
