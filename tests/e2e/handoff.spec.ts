@@ -86,7 +86,7 @@ test('continues a session in another agent with an editable summary and a from c
     await feedTerminal(page, sourceId, '\x1b[31mError: timeout waiting for #dashboard\x1b[0m\r\n')
 
     await page.getByRole('button', { name: 'Pane actions' }).click()
-    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['XContinue in Codex', 'GContinue in Gemini'])
+    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['XContinue in Codex', 'Continue in Gemini'])
     await page.getByRole('menuitem', { name: 'Continue in Codex' }).click()
     const dialog = page.getByRole('dialog', { name: 'Continue in Codex' })
     await expect(dialog).toBeVisible()
@@ -130,13 +130,13 @@ test('continues a session in another agent with an editable summary and a from c
     await page.screenshot({ path: join(SCREENS, '51-handoff-pane.png') })
 
     await page.locator('.pane').nth(1).getByRole('button', { name: 'Pane actions' }).click()
-    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['CContinue in Claude', 'GContinue in Gemini'])
+    await expect(page.getByRole('menuitem', { name: /Continue in/ })).toHaveText(['Continue in Claude', 'Continue in Gemini'])
     await page.keyboard.press('Escape')
 
     await page.keyboard.press('Control+k')
     await expect(page.locator('#palette-input')).toBeFocused()
     await page.keyboard.type('continue in gem')
-    await expect(page.locator('.palette-row')).toHaveText(['GContinue in Gemini'])
+    await expect(page.locator('.palette-row')).toHaveText(['Continue in Gemini'])
     await page.keyboard.press('Enter')
     await expect(page.getByRole('dialog', { name: 'Continue in Gemini' })).toBeVisible()
     await page.keyboard.press('Escape')

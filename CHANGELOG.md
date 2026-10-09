@@ -3,6 +3,24 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Move panes. A **Move pane** button in each pane header lists every position, and Ctrl+Shift+Alt+Left / Right (Home /
+  End for first / last) moves the focused pane. The order is saved with the workspace.
+- Pane keyboard shortcuts: **Ctrl+Tab** and **Ctrl+Shift+Tab** cycle the panes, **Ctrl+1** to **Ctrl+9** jump to one.
+
+### Changed
+
+- Claude and Gemini sessions show their own logos instead of letter badges.
+
+### Fixed
+
+- The pane menu opened at the right edge of the grid for left and bottom panes. It now opens next to its button and
+  flips up or left when there is no room.
+- Esc closes a pane menu even when focus has moved off the menu.
+
 ## [0.5.1] - 2026-10-09
 
 ### Fixed

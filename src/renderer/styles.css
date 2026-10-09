@@ -1176,6 +1176,25 @@ input[type='checkbox'] {
   border: 1px solid var(--muted);
 }
 
+.agent-mark.brand {
+  border: none;
+  background: transparent;
+}
+
+.agent-mark.brand svg {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+
+.agent-mark.brand.claude {
+  color: #d97757;
+}
+
+.agent-mark.brand.gemini {
+  color: #8e75b2;
+}
+
 .slot:empty {
   display: none;
 }

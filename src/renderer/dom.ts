@@ -37,3 +37,16 @@ export const iconButton = (label: string, svg: string, onClick: () => void, extr
   h('button', { class: `icon-btn ${extraClass}`.trim(), type: 'button', 'aria-label': label, title: label, onClick }, icon(svg))
 
 export const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()))
+
+export function placeNearAnchor(menu: HTMLElement, anchor: Element | null, gap = 4): void {
+  if (!anchor) return
+  const a = anchor.getBoundingClientRect()
+  menu.classList.add('floating')
+  const m = menu.getBoundingClientRect()
+  const left = a.right - m.width < 8 ? Math.min(a.left, window.innerWidth - m.width - 8) : a.right - m.width
+  const below = a.bottom + gap + m.height <= window.innerHeight - 8
+  const top = below ? a.bottom + gap : Math.max(8, a.top - gap - m.height)
+  menu.style.left = `${Math.max(8, left)}px`
+  menu.style.top = `${top}px`
+  menu.style.right = 'auto'
+}

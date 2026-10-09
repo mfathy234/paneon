@@ -182,6 +182,49 @@ test('names panes from Claude session files and lays three panes out with a wide
   }
 })
 
+test('reorders panes from the move menu and the keyboard, and opens pane menus next to their button', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchApp(sandbox)
+  try {
+    const add = page.getByRole('button', { name: NEW_IN_SMOKE })
+    await add.click()
+    await add.click()
+    await add.click()
+    const panes = page.locator('.pane')
+    await expect(panes).toHaveCount(3, { timeout: 20_000 })
+    const ids = await panes.evaluateAll((els) => els.map((el) => el.getAttribute('data-pane-id')))
+
+    const left = panes.nth(0)
+    await left.getByRole('button', { name: 'Pane actions' }).click()
+    const menu = page.locator('.pane-actions-menu')
+    await expect(menu).toBeVisible()
+    const paneBox = (await left.boundingBox())!
+    const menuBox = (await menu.boundingBox())!
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(paneBox.x + paneBox.width + 1)
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+
+    await panes.nth(2).getByRole('button', { name: 'Move pane' }).click()
+    await expect(menu.getByRole('menuitem')).toHaveCount(3)
+    await menu.getByRole('menuitem').first().click()
+    await expect
+      .poll(() => panes.evaluateAll((els) => els.map((el) => el.getAttribute('data-pane-id'))))
+      .toEqual([ids[2], ids[0], ids[1]])
+
+    await page.keyboard.press('Control+Shift+Alt+ArrowRight')
+    await expect
+      .poll(() => panes.evaluateAll((els) => els.map((el) => el.getAttribute('data-pane-id'))))
+      .toEqual([ids[0], ids[2], ids[1]])
+
+    await page.keyboard.press('Control+1')
+    await expect(panes.nth(0)).toHaveClass(/focused/)
+    await page.keyboard.press('Control+Tab')
+    await expect(panes.nth(1)).toHaveClass(/focused/)
+  } finally {
+    await closeBounded(app)
+  }
+})
+
 test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex tabs', async () => {
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox)
@@ -190,7 +233,7 @@ test('starts Codex from the quick-pick with Tab, marks it with X and adds Codex 
     await expect(page.locator('.quickpick')).toBeVisible()
     await expect(page.locator('.quickpick .popover-foot')).toContainText('Tab switches agent')
     await page.keyboard.type('smo')
-    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('CClaude')
+    await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('Claude')
     await page.keyboard.press('Tab')
     await expect(page.locator('.quickpick .option.selected .option-agent')).toHaveText('XCodex')
     await page.keyboard.press('Enter')
@@ -229,19 +272,19 @@ test('cycles Claude, Codex, Gemini with Tab, marks Gemini with G and stores a se
     await page.keyboard.press('Control+n')
     await page.keyboard.type('smo')
     const agent = page.locator('.quickpick .option.selected .option-agent')
-    await expect(agent).toHaveText('CClaude')
+    await expect(agent).toHaveText('Claude')
     await page.keyboard.press('Tab')
     await expect(agent).toHaveText('XCodex')
     await page.keyboard.press('Tab')
-    await expect(agent).toHaveText('GGemini')
+    await expect(agent).toHaveText('Gemini')
     await page.keyboard.press('Tab')
-    await expect(agent).toHaveText('CClaude')
+    await expect(agent).toHaveText('Claude')
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
     await page.keyboard.press('Enter')
 
     await expect(page.locator('.pane')).toHaveCount(1)
-    await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveText('G')
+    await expect(page.locator('.pane-header .agent-mark.gemini svg')).toHaveCount(1)
     await expect(page.locator('.tabs [role="tab"]')).toHaveText(['gemini'])
     const first = await activeTermId(page)
     await expect.poll(() => bufferText(page, first), { timeout: 20_000 }).toContain('Smoke Project')

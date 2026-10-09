@@ -17,6 +17,8 @@ describe('parseShortcut', () => {
     expect(parseShortcut('Alt+3')).toEqual({ key: '3', ctrl: false, shift: false, alt: true })
     expect(parseShortcut('Ctrl+Alt+ArrowLeft')?.key).toBe('ArrowLeft')
     expect(parseShortcut('ctrl+f5')?.key).toBe('F5')
+    expect(parseShortcut('Ctrl+Shift+Alt+Home')?.key).toBe('Home')
+    expect(parseShortcut('ctrl+shift+alt+end')?.key).toBe('End')
   })
 
   it('rejects shortcuts without ctrl or alt, unknown modifiers and unknown keys', () => {

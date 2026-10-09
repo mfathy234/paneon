@@ -13,7 +13,7 @@ export interface KeyEventLike {
   metaKey: boolean
 }
 
-const NAMED_KEYS = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Space']
+const NAMED_KEYS = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Space', 'Home', 'End']
 const FUNCTION_KEY = /^F([1-9]|1[0-2])$/i
 
 function normalizeKey(raw: string): string | null {

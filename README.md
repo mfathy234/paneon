@@ -23,6 +23,7 @@
 - **Three agents, one workflow.** Pick a project and its default agent starts in that folder without a prompt. Switch agent per session with the split **New session** button (Claude / Codex / Gemini) or Tab in the quick-pick.
 - **Know what each session is doing.** Busy and idle state, session names, model, context gauge, cost and git changes in a one-line strip under every pane header. A pane that finishes or waits on a permission prompt gets an amber border, a taskbar flash and a Windows notification.
 - **Plans and sub-agents at a glance.** With the optional ops feed, panes show plan progress and a drawer of running sub-agents; a details panel shows context, limits, changed files and the last build and test result.
+- **Arrange panes your way.** Move a pane to any position from the **Move pane** button in its header or from the keyboard, so the wide bottom pane holds the session you want. Switch panes with **Ctrl+Tab** or jump straight to one with **Ctrl+1** to **Ctrl+9**.
 - **Resume where you left off.** Open panes come back on the next start, each agent resumes its own session id. The **Resume** picker (Ctrl+Shift+R) lists earlier sessions of all three agents across your projects, newest first, with search, an agent filter, a project filter and a preview of the first prompt and the last reply.
 - **A command palette.** **Ctrl+K** searches your open sessions, actions, projects, snippets and layouts in one list and runs what you pick from the keyboard.
 - **Saved layouts.** Save the current panes under a name and bring the same setup back later, resuming each agent's session, from the **Layouts** menu, the palette or `paneon open <layout>`.
@@ -127,7 +128,10 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 | Ctrl+Shift+R | Open the picker in **Resume** mode. Inside the picker, **Ctrl+R** toggles New / Resume, **Tab** cycles the agent filter, Enter resumes in a new pane, Shift+Enter resumes in the focused pane (after a confirmation if that tab is a running agent) |
 | Ctrl+Enter, double-click header | Maximize or restore the focused pane |
 | Esc | Restore the grid (while a Claude pane is busy, Esc goes to Claude instead) |
-| Ctrl+Alt+Left / Right | Focus the previous / next pane |
+| Ctrl+Tab, Ctrl+Shift+Tab | Focus the next / previous pane (also Ctrl+Alt+Right / Left) |
+| Ctrl+1 to Ctrl+9 | Focus pane 1 to 9 |
+| Ctrl+Shift+Alt+Left / Right | Move the focused pane one position earlier / later |
+| Ctrl+Shift+Alt+Home / End | Move the focused pane to the first / last position |
 | Ctrl+wheel, Ctrl+=, Ctrl+-, Ctrl+0 | Zoom the focused pane (10-28, default 15), remembered per project |
 | Ctrl+click on a link | Open it in the browser |
 | Ctrl+C with a selection, Ctrl+V | Copy and paste |
@@ -143,6 +147,8 @@ Tip: run `paneon .` in any folder to open it in Paneon.
 | 4 | 2 x 2 |
 | 5-6 | 3 x 2 |
 | 7+ | 3 columns, the grid scrolls |
+
+Panes fill the layout in order. To change which session sits where, click **Move pane** in a pane's header and pick a position, or use Ctrl+Shift+Alt+Left / Right; the order is saved with the workspace.
 
 ### Resuming a session
 

@@ -356,6 +356,28 @@ export function focusRelative(delta: number): void {
   focusPane(panes[(current + delta + panes.length) % panes.length].id)
 }
 
+export function focusPaneAt(index: number): void {
+  const pane = store.state.panes[index]
+  if (pane) focusPane(pane.id)
+}
+
+export function movePane(paneId: string, toIndex: number): void {
+  const panes = store.state.panes
+  const from = panes.findIndex((p) => p.id === paneId)
+  const to = Math.max(0, Math.min(panes.length - 1, toIndex))
+  if (from < 0 || from === to) return
+  const next = [...panes]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  store.patch({ panes: next, focusedId: paneId })
+  persistWorkspace()
+}
+
+export function movePaneBy(paneId: string, delta: number): void {
+  const index = store.state.panes.findIndex((p) => p.id === paneId)
+  if (index >= 0) movePane(paneId, index + delta)
+}
+
 export function toggleMaximize(paneId?: string): void {
   queueMicrotask(() => void refreshGitChanges())
   const target = paneId ?? store.state.focusedId

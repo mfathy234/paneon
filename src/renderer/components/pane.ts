@@ -5,6 +5,7 @@ import {
   closeTerminal,
   focusPane,
   focusRelative,
+  movePane,
   openDetails,
   openPaneFolder,
   restartTab,
@@ -14,8 +15,9 @@ import {
   toggleDetails,
   toggleMaximize
 } from '../actions'
-import type { PaneView } from '../derive'
-import { clear, h, icon, iconButton } from '../dom'
+import { derivePanes, type PaneView } from '../derive'
+import { store } from '../state'
+import { clear, h, icon, iconButton, placeNearAnchor } from '../dom'
 import { AGENTS, AGENT_NAMES, sessionLabel } from '../../shared/agents'
 import { continueIn, continueLabel } from '../handoffActions'
 import type { TabAgent } from '../../shared/types'
@@ -71,6 +73,7 @@ export class PaneComponent {
       this.attentionWord,
       this.restart,
       h('span', { class: 'spacer' }),
+      iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
       iconButton('Previous pane', ICONS.prev, () => focusRelative(-1)),
       iconButton('Next pane', ICONS.next, () => focusRelative(1)),
@@ -171,6 +174,38 @@ export class PaneComponent {
     this.details.replaceChildren(...children)
   }
 
+  private toggleMove(): void {
+    if (this.actionsMenu) return this.closeActions()
+    const views = derivePanes(store.state)
+    const items = views.map((view, i) => {
+      const here = view.pane.id === this.paneId
+      const label = `${i + 1} · ${view.title.toUpperCase()}${here ? '  (this pane)' : ''}`
+      const button = h('button', {
+        class: 'menu-item',
+        type: 'button',
+        role: 'menuitem',
+        disabled: here,
+        onClick: () => {
+          this.closeActions()
+          movePane(this.paneId, i)
+        }
+      }, label)
+      return button
+    })
+    const hint = h('div', { class: 'popover-foot' }, 'Ctrl+Shift+Alt+← → moves the focused pane')
+    this.actionsMenu = h('div', { class: 'popover menu pane-actions-menu', role: 'menu', 'aria-label': 'Move pane to position' }, ...items, hint)
+    this.actionsMenu.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      this.closeActions()
+    })
+    this.el.append(this.actionsMenu)
+    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-move'))
+    items.find((b) => !(b as HTMLButtonElement).disabled)?.focus()
+    setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
+    document.addEventListener('keydown', this.escapeActions, true)
+  }
+
   private toggleActions(): void {
     if (this.actionsMenu) return this.closeActions()
     const run = (action: () => unknown): void => {
@@ -206,8 +241,10 @@ export class PaneComponent {
       this.closeActions()
     })
     this.el.append(this.actionsMenu)
+    placeNearAnchor(this.actionsMenu, this.el.querySelector('.pane-actions'))
     first.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outsideActions, true), 0)
+    document.addEventListener('keydown', this.escapeActions, true)
   }
 
   private readonly outsideActions = (event: Event): void => {
@@ -215,8 +252,15 @@ export class PaneComponent {
     if (this.actionsMenu && !this.actionsMenu.contains(target) && !target.closest('.pane-actions')) this.closeActions()
   }
 
+  private readonly escapeActions = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || !this.actionsMenu) return
+    event.stopPropagation()
+    this.closeActions()
+  }
+
   private closeActions(): void {
     document.removeEventListener('pointerdown', this.outsideActions, true)
+    document.removeEventListener('keydown', this.escapeActions, true)
     this.actionsMenu?.remove()
     this.actionsMenu = null
   }
@@ -308,6 +352,7 @@ export class PaneComponent {
       }
     })
     this.tabs.append(this.menu)
+    placeNearAnchor(this.menu, anchor)
     first.focus()
     setTimeout(() => document.addEventListener('pointerdown', this.outside, true), 0)
   }
