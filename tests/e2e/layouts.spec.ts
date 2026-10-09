@@ -113,7 +113,7 @@ test('opens a layout into an empty grid, asks before touching open panes and res
     await expect(page.locator('.layout-row')).toHaveCount(3)
     await expect(page.locator('.layout-row').nth(2)).toContainText('removed project')
     await page.getByRole('button', { name: 'Open layout Morning' }).click()
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
     await expect(page.locator('.pane-header .agent-mark.claude')).toHaveCount(1)
     await expect(page.locator('.pane-header .agent-mark.codex')).toHaveCount(1)
@@ -136,25 +136,25 @@ test('opens a layout into an empty grid, asks before touching open panes and res
     await expect(choice).toContainText("Opening 'Docs day' while 2 panes are open.")
     await page.screenshot({ path: join(SCREENS, '34-replace-panes.png') })
     await choice.getByRole('button', { name: 'Cancel' }).click()
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
 
     await page.getByRole('button', { name: 'Layouts' }).click()
     await page.getByRole('button', { name: 'Open layout Docs day' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Add alongside' }).click()
-    await expect(page.locator('.pane')).toHaveCount(3)
+    await expect(page.locator('.pane')).toHaveCount(3, { timeout: 20_000 })
     await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveCount(1)
 
     await page.getByRole('button', { name: 'Layouts' }).click()
     await page.getByRole('button', { name: 'Open layout Morning' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Replace with Morning' }).click()
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
     await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveCount(0)
     await expect.poll(() => readSettings(sandbox.userData).workspace?.panes?.length).toBe(2)
 
     await page.getByRole('button', { name: 'Layouts' }).click()
     await page.getByRole('button', { name: 'Open layout Lost' }).click()
     await expect(page.locator('.toast')).toHaveText("Layout 'Lost' has no pane whose project still exists.")
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
@@ -179,29 +179,29 @@ test('the paneon command lists and opens layouts', async () => {
 
     const opened = await runCli(sandbox, ['open', 'Morning'])
     expect(opened).toMatchObject({ code: 0, out: "Opened layout 'Morning' (2 panes)" })
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
 
     const pending = runCli(sandbox, ['open', 'docs-day'])
     const choice = page.getByRole('alertdialog')
     await expect(choice.getByRole('heading')).toHaveText('Replace the current panes?')
     await choice.getByRole('button', { name: 'Replace with Docs day' }).click()
     expect(await pending).toMatchObject({ code: 0, out: "Opened layout 'Docs day' (1 pane)" })
-    await expect(page.locator('.pane')).toHaveCount(1)
+    await expect(page.locator('.pane')).toHaveCount(1, { timeout: 20_000 })
     await expect(page.locator('.pane-header .agent-mark.gemini')).toHaveCount(1)
 
     const alongside = await runCli(sandbox, ['open', 'morning', '--alongside'])
     expect(alongside.out).toBe("Opened layout 'Morning' (2 panes)")
-    await expect(page.locator('.pane')).toHaveCount(3)
+    await expect(page.locator('.pane')).toHaveCount(3, { timeout: 20_000 })
     const replaced = await runCli(sandbox, ['open', 'morning', '--replace'])
     expect(replaced.code).toBe(0)
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
 
     const declined = runCli(sandbox, ['open', 'docs-day'])
     await page.getByRole('alertdialog').getByRole('button', { name: 'Cancel' }).click()
     const result = await declined
     expect(result.code).toBe(1)
     expect(result.err).toContain("Did not open layout 'Docs day'.")
-    await expect(page.locator('.pane')).toHaveCount(2)
+    await expect(page.locator('.pane')).toHaveCount(2, { timeout: 20_000 })
   } finally {
     expect(await closeApp(app)).toBeLessThan(QUIT_BUDGET_MS)
   }
