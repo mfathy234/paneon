@@ -2,6 +2,7 @@ import type { ClipboardContent } from './clipboard'
 import type { AgentsReport } from './agentTools'
 import type { CliCommand, CliReply } from './cli'
 import type { WorktreeStatus } from './compare'
+import type { CommitRequest, DiscardRequest, GitCommitResult, GitDiffResult, RepoStatusResult } from './gitStatus'
 import type { OpsSnapshot } from './opsFeed'
 import type { UpdateState } from './updates'
 import type { UsageSnapshot } from './sessionCost'
@@ -54,6 +55,11 @@ export interface GridApi {
   trackOps(sessionIds: string[]): void
   gitChanges(folder: string): Promise<GitChanges | null>
   gitFiles(folder: string): Promise<string[] | null>
+  gitStatus(folder: string): Promise<RepoStatusResult>
+  gitCommit(request: CommitRequest): Promise<GitCommitResult>
+  gitPush(folder: string): Promise<GitResult>
+  gitDiscard(request: DiscardRequest): Promise<GitResult>
+  gitDiff(folder: string, path: string): Promise<GitDiffResult>
   listResumable(agent: AgentKind, folder: string): Promise<ResumeEntry[]>
   listAllResumable(query: ResumeQuery): Promise<ResumeSession[]>
   quickOpen(kind: QuickOpenKind, folder: string): Promise<void>

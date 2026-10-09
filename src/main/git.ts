@@ -21,6 +21,10 @@ export async function currentBranch(folder: string): Promise<string | null> {
 
 const changesCache = new Map<string, { at: number; value: GitChanges | null }>()
 
+export function forgetChanges(): void {
+  changesCache.clear()
+}
+
 export async function gitChanges(folder: string): Promise<GitChanges | null> {
   const cached = changesCache.get(folder)
   if (cached && Date.now() - cached.at < CHANGES_TTL_MS) return cached.value

@@ -9,6 +9,7 @@ import { ICONS } from '../icons'
 export interface StripHandlers {
   title: string
   onToggleAgents(): void
+  onOpenChanges(): void
 }
 
 function opsItems(info: PaneInfo, handlers: StripHandlers): HTMLElement[] {
@@ -64,17 +65,27 @@ export function paneInfoStrip(info: PaneInfo, handlers: StripHandlers): HTMLElem
   if (info.tokens !== null) items.push(h('span', { class: 'info-tokens', title: 'Session tokens' }, `${formatTokens(info.tokens)} tokens`))
   if (info.costUsd !== null) items.push(h('span', { class: 'info-cost', title: 'Session cost' }, formatCost(info.costUsd)))
   if (info.changes) {
-    items.push(
+    const content =
       info.changes.files === 0
-        ? h('span', { class: 'info-changes', title: 'Uncommitted changes' }, formatChanges(info.changes))
-        : h(
-            'span',
-            { class: 'info-changes', title: 'Uncommitted changes (git diff HEAD)' },
+        ? [formatChanges(info.changes)]
+        : [
             h('span', { class: 'add' }, `+${info.changes.added}`),
             ' ',
             h('span', { class: 'del' }, `−${info.changes.removed}`),
             ` · ${info.changes.files} file${info.changes.files === 1 ? '' : 's'}`
-          )
+          ]
+    items.push(
+      h(
+        'button',
+        {
+          class: 'info-changes',
+          type: 'button',
+          title: 'Review and commit changes',
+          'aria-label': 'Review and commit changes',
+          onClick: handlers.onOpenChanges
+        },
+        ...content
+      )
     )
   }
   if (info.ageMs !== null) items.push(h('span', { class: 'info-age', title: 'Last activity' }, `${formatAge(info.ageMs)} ago`))

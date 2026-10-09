@@ -16,6 +16,8 @@ import { readGeminiSessions } from './geminiWatcher'
 import { notifyUser, quickOpen } from './desktop'
 import { createWorktrees, probeRepo, removeWorktree, worktreeStatus } from './compare'
 import { changedFiles, currentBranch, gitChanges } from './git'
+import { commitFiles, discardFiles, fileDiff, pushBranch, repoStatus } from './gitCommit'
+import type { CommitRequest, DiscardRequest } from '../shared/gitStatus'
 import { checkAgentTools } from './agentTools'
 import { readClipboardContent } from './clipboardImage'
 import { bridgeDirs, claudeSettingsPath } from './paths'
@@ -85,6 +87,11 @@ export function registerIpc(
   })
   ipcMain.handle(IPC.gitChanges, (_event, folder: string) => gitChanges(folder))
   ipcMain.handle(IPC.gitFiles, (_event, folder: string) => changedFiles(folder))
+  ipcMain.handle(IPC.gitStatus, (_event, folder: string) => repoStatus(folder))
+  ipcMain.handle(IPC.gitCommit, (_event, request: CommitRequest) => commitFiles(request))
+  ipcMain.handle(IPC.gitPush, (_event, folder: string) => pushBranch(folder))
+  ipcMain.handle(IPC.gitDiscard, (_event, request: DiscardRequest) => discardFiles(request))
+  ipcMain.handle(IPC.gitDiff, (_event, folder: string, path: string) => fileDiff(folder, path))
   ipcMain.handle(IPC.resumeList, (_event, agent: AgentKind, folder: string) =>
     agent === 'codex' ? listCodexSessions(folder) : agent === 'gemini' ? listGeminiSessions(folder) : listClaudeSessions(folder)
   )

@@ -56,6 +56,8 @@ export function present<T>(dialog: HTMLElement, cancelValue: T, focus: HTMLEleme
     }
   })
   const onKey = (event: KeyboardEvent): void => {
+    const overlays = document.querySelectorAll('.overlay')
+    if (overlays[overlays.length - 1] !== overlay) return
     if (event.key === 'Escape') {
       event.preventDefault()
       event.stopPropagation()
