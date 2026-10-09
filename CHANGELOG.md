@@ -3,7 +3,7 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.0] - 2026-10-09
 
 ### Added
 
@@ -23,11 +23,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - The pane menu opened at the right edge of the grid for left and bottom panes. It now opens next to its button and
   flips up or left when there is no room.
 - Esc closes a pane menu even when focus has moved off the menu.
-
-## [0.5.1] - 2026-10-09
-
-### Fixed
-
 - Quitting no longer hangs: shutdown steps are time-limited and the app ends its own process after cleanup, with a
   watchdog backstop.
 - Clicking the update pill right as the app refreshed could be ignored, leaving the update popover closed. The pill now
