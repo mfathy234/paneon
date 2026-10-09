@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { APP_VERSION, closeApp, createSandbox, launchApp, type Sandbox } from './helpers'
 
-const RELEASE_URL = 'https://github.com/mfathy234/paneon/releases/tag/v0.6.0'
+const RELEASE_URL = 'https://github.com/mfathy234/paneon/releases/tag/v9.9.0'
 const NOTES = [
   '### Added',
   '',
@@ -13,7 +13,7 @@ const NOTES = [
   '',
   '### Fixed',
   '',
-  `- Release notes link: [v0.6.0](${RELEASE_URL})`
+  `- Release notes link: [v9.9.0](${RELEASE_URL})`
 ].join('\n')
 
 interface Script {
@@ -35,7 +35,7 @@ interface Hook {
 
 const AVAILABLE: Script = {
   check: 'available',
-  info: { version: '0.6.0', releaseDate: '2026-11-01T10:00:00.000Z', releaseNotes: NOTES },
+  info: { version: '9.9.0', releaseDate: '2026-11-01T10:00:00.000Z', releaseNotes: NOTES },
   progress: [10, 42],
   hold: true
 }
@@ -84,11 +84,11 @@ test('an update walks from available to downloading to ready and restarts throug
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, AVAILABLE, { PANEON_OPEN_LOG: join(sandbox.root, 'open.log') }))
   try {
-    await expect(pill(page)).toHaveText('Update 0.6.0')
+    await expect(pill(page)).toHaveText('Update 9.9.0')
     await expect(pill(page)).toHaveClass(/status-available/)
     await pill(page).click()
     const popover = page.locator('.update-popover')
-    await expect(popover.locator('.update-title')).toHaveText('Paneon 0.6.0 is available')
+    await expect(popover.locator('.update-title')).toHaveText('Paneon 9.9.0 is available')
     const version = APP_VERSION
     await expect(popover.locator('.update-sub')).toContainText(`You have ${version} · released`)
     await expect(popover.locator('#update-notes')).toContainText('Dark mode toggle for acme-web')
@@ -103,7 +103,7 @@ test('an update walks from available to downloading to ready and restarts throug
     expect(lines(sandbox.openLog).map((line) => JSON.parse(line).link)).toEqual([RELEASE_URL, RELEASE_URL])
 
     await popover.locator('#update-now').click()
-    await expect(pill(page)).toHaveText('Downloading 0.6.0 42%')
+    await expect(pill(page)).toHaveText('Downloading 9.9.0 42%')
     await expect(pill(page).locator('.pill-line')).toHaveCSS('width', /^[1-9]/)
     await page.screenshot({ path: 'test-results/screens/30-update-downloading.png' })
     await hookCall<void>(app, 'hook.release()')
@@ -112,7 +112,7 @@ test('an update walks from available to downloading to ready and restarts throug
 
     await openPopover(page)
     await expect(page.locator('.update-popover .update-title')).toHaveText(
-      'Paneon 0.6.0 is ready. Restart now, or it installs when you quit.'
+      'Paneon 9.9.0 is ready. Restart now, or it installs when you quit.'
     )
     await expect(page.locator('.update-popover')).toContainText('Open sessions reopen after the restart')
     const gone = exited(app)
@@ -192,7 +192,7 @@ test('Later hides the pill until a newer version than the dismissed one is found
   const sandbox = createSandbox()
   const { app, page } = await launchApp(sandbox, updaterEnv(sandbox, AVAILABLE))
   try {
-    await expect(pill(page)).toHaveText('Update 0.6.0')
+    await expect(pill(page)).toHaveText('Update 9.9.0')
     await pill(page).click()
     await page.locator('#update-later').click()
     await expect(pill(page)).toBeHidden()
@@ -204,9 +204,9 @@ test('Later hides the pill until a newer version than the dismissed one is found
     await expect(page.locator('#update-status')).toContainText('update available')
     await expect(pill(page)).toBeHidden()
 
-    await setScript(app, { ...AVAILABLE, info: { version: '0.6.1', releaseNotes: '### Fixed\n\n- A fix' } })
+    await setScript(app, { ...AVAILABLE, info: { version: '9.9.1', releaseNotes: '### Fixed\n\n- A fix' } })
     await page.locator('#check-now').click()
-    await expect(pill(page)).toHaveText('Update 0.6.1')
+    await expect(pill(page)).toHaveText('Update 9.9.1')
   } finally {
     await closeApp(app)
   }
@@ -220,10 +220,10 @@ test('the portable build points to GitHub and never downloads', async () => {
     updaterEnv(sandbox, AVAILABLE, { PORTABLE_EXECUTABLE_DIR: portableDir, PANEON_OPEN_LOG: join(sandbox.root, 'open.log') })
   )
   try {
-    await expect(pill(page)).toHaveText('Update 0.6.0')
+    await expect(pill(page)).toHaveText('Update 9.9.0')
     await pill(page).click()
     const popover = page.locator('.update-popover')
-    await expect(popover.locator('.update-title')).toHaveText("Paneon 0.6.0 is available. The portable version can't update itself.")
+    await expect(popover.locator('.update-title')).toHaveText("Paneon 9.9.0 is available. The portable version can't update itself.")
     await expect(popover.locator('#update-now')).toHaveCount(0)
     await expect(popover.getByRole('button', { name: 'Later' })).toBeVisible()
     await popover.getByRole('button', { name: 'Download from GitHub' }).click()

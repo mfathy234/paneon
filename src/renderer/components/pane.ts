@@ -75,8 +75,8 @@ export class PaneComponent {
       h('span', { class: 'spacer' }),
       iconButton('Move pane', ICONS.layout, () => this.toggleMove(), 'pane-move'),
       iconButton('Pane actions', ICONS.more, () => this.toggleActions(), 'pane-actions'),
-      iconButton('Previous pane', ICONS.prev, () => focusRelative(-1)),
-      iconButton('Next pane', ICONS.next, () => focusRelative(1)),
+      iconButton('Previous pane', ICONS.prev, () => focusRelative(-1), 'pane-prev'),
+      iconButton('Next pane', ICONS.next, () => focusRelative(1), 'pane-next'),
       this.maxButton,
       iconButton('Close pane', ICONS.close, () => void closePane(paneId), 'close-pane')
     )

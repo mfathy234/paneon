@@ -557,6 +557,7 @@ button {
 }
 
 .pane-header {
+  container: pane-header / inline-size;
   height: 40px;
   flex: none;
   display: flex;
@@ -576,7 +577,15 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
+  min-width: 72px;
+  flex-shrink: 1;
+}
+
+@container pane-header (max-width: 640px) {
+  .pane-header .pane-prev,
+  .pane-header .pane-next {
+    display: none;
+  }
 }
 
 .pane-fresh {
