@@ -4,6 +4,8 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import { insertionData } from '../shared/snippets'
 import { h } from './dom'
+import { TerminalHighlights, type HighlightHost } from './terminalHighlights'
+import { registerFileLinks, type FileLinkHost } from './terminalLinks'
 import { TerminalSearch } from './terminalSearch'
 import type { ThemeBundle } from './themeManager'
 
@@ -20,6 +22,8 @@ export interface TerminalCallbacks {
   readClipboard(): Promise<string>
   writeClipboard(text: string): Promise<void>
   openLink(url: string): void
+  fileLinks: FileLinkHost
+  highlights: HighlightHost
 }
 
 export class TerminalView {
@@ -28,6 +32,7 @@ export class TerminalView {
   private readonly fitAddon = new FitAddon()
   private readonly observer: ResizeObserver
   private readonly search: TerminalSearch
+  private readonly highlights: TerminalHighlights
   private opened = false
   private frame = 0
 
@@ -51,6 +56,8 @@ export class TerminalView {
     })
     this.term.loadAddon(this.fitAddon)
     this.term.loadAddon(new WebLinksAddon((event, uri) => this.handleLink(event, uri)))
+    registerFileLinks(this.term, callbacks.fileLinks)
+    this.highlights = new TerminalHighlights(this.term, callbacks.highlights)
     this.term.onData((data) => callbacks.onInput(data))
     this.term.onResize(({ cols, rows }) => callbacks.onResize(cols, rows))
     this.term.attachCustomKeyEventHandler((event) => this.handleKey(event))
@@ -59,6 +66,10 @@ export class TerminalView {
     this.el.addEventListener('focusin', () => callbacks.onFocus())
     this.search = new TerminalSearch(this.term, this.el)
     this.applyBundle(bundle)
+  }
+
+  refreshHighlights(): void {
+    this.highlights.refresh()
   }
 
   openSearch(): void {
@@ -170,6 +181,7 @@ export class TerminalView {
     cancelAnimationFrame(this.frame)
     this.observer.disconnect()
     this.search.dispose()
+    this.highlights.dispose()
     this.term.dispose()
     this.el.remove()
   }

@@ -4,6 +4,7 @@ import { pasteText } from '../shared/clipboard'
 import { noteOutput } from './ptyActivity'
 import { mapTerm, store } from './state'
 import { currentBundle } from './themeManager'
+import { fileLinkHost, highlightHost, watchHighlights } from './terminalExtras'
 import { TerminalView } from './terminalView'
 
 export interface TerminalEvents {
@@ -48,13 +49,17 @@ export function ensureTerminal(id: string, fontSize: number): TerminalView {
     onFocus: () => events.onFocus(id),
     readClipboard: async () => pasteText(await api.readClipboard(), tabAgent(id)),
     writeClipboard: (text) => api.writeClipboard(text),
-    openLink: (url) => void api.openExternal(url)
+    openLink: (url) => void api.openExternal(url),
+    fileLinks: fileLinkHost(id),
+    highlights: highlightHost()
   })
   views.set(id, view)
   for (const chunk of pending.get(id) ?? []) view.write(chunk)
   pending.delete(id)
   return view
 }
+
+watchHighlights(() => views.values())
 
 export const getTerminal = (id: string): TerminalView | undefined => views.get(id)
 

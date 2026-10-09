@@ -34,6 +34,8 @@ export const IPC = {
   gitDiff: 'git:diff',
   resumeList: 'resume:list',
   quickOpen: 'shell:quick-open',
+  filesExist: 'files:exist',
+  filesOpen: 'files:open',
   notify: 'app:notify',
   notifyClick: 'app:notify-click',
   bridgePreview: 'bridge:preview',

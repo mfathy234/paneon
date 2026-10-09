@@ -48,6 +48,7 @@ test('Settings opens from the top bar and with Ctrl+comma, and every section ren
       notifications: '#bridge-toggle',
       agents: '#settings-full-access-claude',
       updates: '#check-now',
+      highlights: '#highlights-toggle',
       changelog: '#changelog-list',
       about: '#open-data-folder'
     }

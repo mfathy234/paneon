@@ -3,6 +3,7 @@ import { DEFAULT_THEME_ID } from './themes'
 import { formatShortcut, parseShortcut } from './shortcuts'
 import { isVersion } from './version'
 import { sanitizeSplits } from './splits'
+import { defaultHighlights, sanitizeHighlights } from './highlights'
 import {
   DEFAULT_FONT_SIZE,
   clampFontSize,
@@ -56,7 +57,8 @@ export const defaultSettings = (): Settings => ({
   lastSeenVersion: null,
   autoUpdateCheck: true,
   paletteShortcut: DEFAULT_PALETTE_SHORTCUT,
-  fullAccess: defaultFullAccess()
+  fullAccess: defaultFullAccess(),
+  highlights: defaultHighlights()
 })
 
 function sanitizeProjects(value: unknown): Project[] {
@@ -261,6 +263,7 @@ export function migrateSettings(raw: unknown): Settings {
     lastSeenVersion: isVersion(raw.lastSeenVersion) ? raw.lastSeenVersion : null,
     autoUpdateCheck: raw.autoUpdateCheck !== false,
     paletteShortcut: sanitizeShortcut(raw.paletteShortcut),
-    fullAccess: sanitizeFullAccess(raw.fullAccess)
+    fullAccess: sanitizeFullAccess(raw.fullAccess),
+    highlights: sanitizeHighlights(raw.highlights)
   }
 }

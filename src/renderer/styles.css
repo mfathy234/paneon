@@ -3646,6 +3646,41 @@ body.dragging-ui {
   overflow-wrap: anywhere;
 }
 
+.hl-rule-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hl-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.hl-pattern {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.hl-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hl-form .text-input {
+  width: 220px;
+}
+
+.hl-form .field-select {
+  width: 110px;
+}
+
 .settings-panel .field-error {
   margin: 0;
 }

@@ -157,7 +157,7 @@ export function runCli(sandbox: Sandbox, args: string[], cwd: string = sandbox.r
   })
 }
 
-export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'changelog' | 'about'
+export type SettingsSectionId = 'general' | 'notifications' | 'agents' | 'updates' | 'highlights' | 'changelog' | 'about'
 
 export async function openSettings(page: Page, section: SettingsSectionId = 'general'): Promise<void> {
   const button = page.locator('#settings-button')
