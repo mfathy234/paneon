@@ -23,6 +23,7 @@ export const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../pac
 
 interface GridHook {
   bufferText(id: string): string
+  lastInput(id: string): string
   fontSize(id: string): number
   feed(id: string, data: string): void
   selectAll(id: string): void
@@ -103,6 +104,9 @@ export async function activeTermId(page: Page): Promise<string> {
 
 export const bufferText = (page: Page, id: string): Promise<string> =>
   page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.bufferText(termId), id)
+
+export const lastInput = (page: Page, id: string): Promise<string> =>
+  page.evaluate((termId) => (window as unknown as { __grid: GridHook }).__grid.lastInput(termId), id)
 
 export const feedTerminal = (page: Page, id: string, data: string): Promise<void> =>
   page.evaluate(([termId, text]) => (window as unknown as { __grid: GridHook }).__grid.feed(termId, text), [id, data])

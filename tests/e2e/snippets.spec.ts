@@ -136,7 +136,7 @@ test('inserting a snippet types it into the focused terminal without sending it 
 
     await page.keyboard.press('Control+k')
     await expect(page.locator('#palette-input')).toBeFocused()
-    await page.keyboard.type('commit')
+    await page.keyboard.type('zebra')
     await expect(page.locator('.palette-row')).toHaveCount(0)
     await page.locator('#palette-input').fill('review')
     await expect(page.locator('.palette-group')).toHaveText(['Snippets'])

@@ -32,12 +32,15 @@ function tabAgent(id: string): TabAgent | undefined {
   return undefined
 }
 
+const lastInput = new Map<string, string>()
+
 export function ensureTerminal(id: string, fontSize: number): TerminalView {
   const existing = views.get(id)
   if (existing) return existing
   const view = new TerminalView(id, fontSize, currentBundle(), {
     onInput: (data) => {
       api.write(id, data)
+      lastInput.set(id, data)
       if (data.charCodeAt(0) !== 27 || data.length === 1) clearResumeChip(id)
     },
     onResize: (cols, rows) => api.resize(id, cols, rows),
@@ -69,6 +72,7 @@ export function applyBundleToAll(): void {
 Object.defineProperty(window, '__grid', {
   value: {
     bufferText: (id: string): string => views.get(id)?.bufferText() ?? '',
+    lastInput: (id: string): string => lastInput.get(id) ?? '',
     fontSize: (id: string): number => views.get(id)?.fontSize ?? 0,
     feed: (id: string, data: string): void => views.get(id)?.write(data),
     selectAll: (id: string): void => views.get(id)?.selectAll()
