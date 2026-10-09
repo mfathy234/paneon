@@ -3,6 +3,15 @@
 All notable changes to Paneon are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-10-09
+
+### Fixed
+
+- Quitting no longer hangs: shutdown steps are time-limited and the app ends its own process after cleanup, with a
+  watchdog backstop.
+- Clicking the update pill right as the app refreshed could be ignored, leaving the update popover closed. The pill now
+  keeps its parts in place between refreshes, so the click always lands.
+
 ## [0.5.0] - 2026-10-09
 
 ### Added
