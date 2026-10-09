@@ -2,6 +2,7 @@ import type { QuitLog } from './quitLog'
 
 export const FLUSH_TIMEOUT_MS = 1000
 export const KILL_TIMEOUT_MS = 2000
+export const STORAGE_TIMEOUT_MS = 1000
 export const HARD_DEADLINE_MS = 8000
 export const WATCHDOG_GRACE_MS = 500
 
@@ -10,10 +11,12 @@ export interface ShutdownDeps {
   stopServices(): void
   flushRenderer(): Promise<void>
   terminateAll(timeoutMs: number): Promise<void>
+  flushStorage(): Promise<void>
   finish(): void
   exit(code: number): void
   flushTimeoutMs?: number
   killTimeoutMs?: number
+  storageTimeoutMs?: number
   hardDeadlineMs?: number
 }
 
@@ -47,6 +50,7 @@ export async function runPhases(deps: ShutdownDeps): Promise<void> {
   await phase(deps, 'flush', deps.flushRenderer, deps.flushTimeoutMs ?? FLUSH_TIMEOUT_MS)
   const kill = deps.killTimeoutMs ?? KILL_TIMEOUT_MS
   await phase(deps, 'terminateAll', () => deps.terminateAll(kill), kill + 500)
+  await phase(deps, 'flushStorage', deps.flushStorage, deps.storageTimeoutMs ?? STORAGE_TIMEOUT_MS)
 }
 
 export function exitNow(deps: ShutdownDeps, reason: string): void {

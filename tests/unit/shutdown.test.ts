@@ -15,6 +15,7 @@ function makeDeps(overrides: Partial<ShutdownDeps> = {}): ShutdownDeps & { lines
     stopServices: () => void calls.push('stop'),
     flushRenderer: async () => void calls.push('flush'),
     terminateAll: async () => void calls.push('terminate'),
+    flushStorage: async () => void calls.push('storage'),
     finish: () => void calls.push('finish'),
     exit: (code) => void exits.push(code),
     ...overrides
@@ -38,7 +39,7 @@ describe('shutdown', () => {
     const quit = runQuit(deps)
     await vi.advanceTimersByTimeAsync(0)
     await quit
-    expect(deps.calls).toEqual(['stop', 'flush', 'terminate', 'finish'])
+    expect(deps.calls).toEqual(['stop', 'flush', 'terminate', 'storage', 'finish'])
     expect(deps.lines).toContain('flush done')
     expect(deps.lines).toContain('terminateAll done')
   })
@@ -49,7 +50,7 @@ describe('shutdown', () => {
     await vi.advanceTimersByTimeAsync(1000)
     await quit
     expect(deps.lines).toContain('flush timeout')
-    expect(deps.calls).toEqual(['stop', 'terminate', 'finish'])
+    expect(deps.calls).toEqual(['stop', 'terminate', 'storage', 'finish'])
   })
 
   it('moves on when the process kill never settles', async () => {
@@ -58,6 +59,15 @@ describe('shutdown', () => {
     await vi.advanceTimersByTimeAsync(2500)
     await quit
     expect(deps.lines).toContain('terminateAll timeout')
+    expect(deps.calls).toContain('finish')
+  })
+
+  it('moves on when flushing the storage never settles', async () => {
+    const deps = makeDeps({ flushStorage: never })
+    const quit = runQuit(deps)
+    await vi.advanceTimersByTimeAsync(1000)
+    await quit
+    expect(deps.lines).toContain('flushStorage timeout')
     expect(deps.calls).toContain('finish')
   })
 
@@ -71,7 +81,7 @@ describe('shutdown', () => {
     await runPhases(deps)
     expect(deps.lines).toContain('flush error')
     expect(deps.lines.some((line) => line.includes('stop failed'))).toBe(true)
-    expect(deps.calls).toEqual(['terminate'])
+    expect(deps.calls).toEqual(['terminate', 'storage'])
   })
 
   it('exits unconditionally at the hard deadline when finish never completes the quit', async () => {

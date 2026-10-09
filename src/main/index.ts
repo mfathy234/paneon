@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { BrowserWindow, Menu, app, ipcMain, net, protocol } from 'electron'
+import { BrowserWindow, Menu, app, ipcMain, net, protocol, session } from 'electron'
 import { IPC } from '../shared/ipc'
 import { CodexWatcher } from './codexWatcher'
 import { GeminiWatcher } from './geminiWatcher'
@@ -64,6 +64,16 @@ function flushRenderer(): Promise<void> {
     ipcMain.once(IPC.flushDone, finish)
     window.webContents.send(IPC.flushRequest)
   })
+}
+
+function terminateProcess(code: number): void {
+  quitLog(`terminating the process (code ${code})`)
+  try {
+    process.kill(process.pid, 'SIGKILL')
+  } catch (error) {
+    quitLog(`self kill failed: ${(error as Error).message}`)
+  }
+  app.exit(code)
 }
 
 function send(channel: string, ...args: unknown[]): void {
@@ -166,14 +176,15 @@ app.whenReady().then(() => {
       usage.flush()
     },
     flushRenderer,
+    flushStorage: async () => {
+      session.defaultSession.flushStorageData()
+      await session.defaultSession.cookies.flushStore()
+    },
     terminateAll: (timeoutMs) => ptys.terminateAll(timeoutMs, quitLog),
     finish: () => {
-      if (!updates?.installOnQuit()) {
-        quitLog('app.exit called')
-        app.exit(0)
-      }
+      if (!updates?.installOnQuit()) terminateProcess(0)
     },
-    exit: (code) => app.exit(code)
+    exit: terminateProcess
   }
   const armWatchdog = (): void => {
     startQuitWatchdog({ ms: HARD_DEADLINE_MS + WATCHDOG_GRACE_MS })
